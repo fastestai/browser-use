@@ -29,7 +29,7 @@ app.include_router(router, prefix="/api")
 
 def start():
     """启动服务器"""
-    port = int(os.getenv("API_PORT", 8080))
+    port = int(os.getenv("API_PORT", 18080))
     host = os.getenv("API_HOST", "localhost")
     
     uvicorn.run(
