@@ -50,6 +50,7 @@ class DomService:
 		}
 
 		eval_page = await self.page.evaluate(js_code, args)  # This is quite big, so be careful
+		print("eval_page", eval_page)
 		html_to_dict = self._parse_node(eval_page)
 
 		if html_to_dict is None or not isinstance(html_to_dict, DOMElementNode):

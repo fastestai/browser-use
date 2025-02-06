@@ -279,8 +279,6 @@ class Agent:
 		try:
 			state = await self.browser_context.get_state()
 
-			print("state info",state)
-
 			self._check_if_stopped_or_paused()
 			self.message_manager.add_state_message(state, self._last_result, step_info, self.use_vision)
 
@@ -291,7 +289,6 @@ class Agent:
 				self.message_manager.add_plan(plan, position=-1)
 
 			input_messages = self.message_manager.get_messages()
-			print("input_messages",input_messages)
 
 			self._check_if_stopped_or_paused()
 
