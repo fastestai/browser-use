@@ -274,8 +274,12 @@ class Agent:
 		model_output = None
 		result: list[ActionResult] = []
 
+		print("step info",step_info)
+
 		try:
 			state = await self.browser_context.get_state()
+
+			print("state info",state)
 
 			self._check_if_stopped_or_paused()
 			self.message_manager.add_state_message(state, self._last_result, step_info, self.use_vision)
@@ -287,6 +291,7 @@ class Agent:
 				self.message_manager.add_plan(plan, position=-1)
 
 			input_messages = self.message_manager.get_messages()
+			print("input_messages",input_messages)
 
 			self._check_if_stopped_or_paused()
 
@@ -428,6 +433,7 @@ class Agent:
 		"""Get next action from LLM based on current state"""
 		converted_input_messages = self._convert_input_messages(input_messages, self.model_name)
 
+
 		if self.model_name == 'deepseek-reasoner' or self.model_name.startswith('deepseek-r1'):
 			output = self.llm.invoke(converted_input_messages)
 			output.content = self._remove_think_tags(output.content)
@@ -443,6 +449,7 @@ class Agent:
 			response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
 			parsed: AgentOutput | None = response['parsed']
 		else:
+			print('entering')
 			structured_llm = self.llm.with_structured_output(self.AgentOutput, include_raw=True, method=self.tool_calling_method)
 			response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
 			parsed: AgentOutput | None = response['parsed']
