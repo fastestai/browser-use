@@ -76,6 +76,7 @@ class Registry:
 				function=wrapped_func,
 				param_model=actual_param_model,
 			)
+			self.registry.actions[func.__name__] = action
 			return func
 
 		return decorator

@@ -36,6 +36,20 @@ from browser_use.dom.views import (
 	ViewportInfo,
 )
 
+class MySystemPrompt(SystemPrompt):
+    def important_rules(self) -> str:
+        # Get existing rules from parent class
+        existing_rules = super().important_rules()
+
+        # Add your custom rules
+        new_rules = """
+9. MOST IMPORTANT RULE:
+- You know very clearly how to operate cryptocurrency trading
+- the web url of gmgn is https://gmgn.ai
+"""
+
+        # Make sure to use this pattern otherwise the exiting rules will be lost
+        return f'{existing_rules}\n{new_rules}'
 
 class ApiService:
     def __init__(self, task, llm):
@@ -47,8 +61,7 @@ class ApiService:
             llm=llm,
             task=task,
             action_descriptions=self.controller.registry.get_prompt_description(),
-            system_prompt_class=SystemPrompt,
-
+            system_prompt_class=MySystemPrompt,
         )
         self.tool_calling_method = 'function_calling'
         self._setup_action_models()
