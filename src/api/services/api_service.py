@@ -1,7 +1,6 @@
 from typing import List, Optional
-from langchain_core.messages import BaseMessage
 
-from browser_use.browser.views import BrowserState, BrowserStateHistory, TabInfo
+from browser_use.browser.views import BrowserState, TabInfo
 
 
 import asyncio
@@ -9,17 +8,9 @@ import asyncio
 
 from browser_use.agent.message_manager.service import MessageManager
 from browser_use.agent.views import (
-	ActionResult,
-	AgentError,
-	AgentHistory,
-	AgentHistoryList,
-	AgentOutput,
-	AgentStepInfo,
+	AgentOutput
 )
 
-from pydantic import BaseModel, Field, create_model
-
-from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI  # 或其他您使用的LLM
 
 from browser_use.controller.service import Controller
@@ -30,11 +21,12 @@ from browser_use.dom.views import (
 	CoordinateSet,
 	DOMBaseNode,
 	DOMElementNode,
-	DOMState,
 	DOMTextNode,
 	SelectorMap,
 	ViewportInfo,
 )
+from pydantic import BaseModel
+
 
 class MySystemPrompt(SystemPrompt):
     def important_rules(self) -> str:
@@ -51,11 +43,14 @@ class MySystemPrompt(SystemPrompt):
         # Make sure to use this pattern otherwise the exiting rules will be lost
         return f'{existing_rules}\n{new_rules}'
 
+
+# Define the output format as a Pydantic model
+
 class ApiService:
-    def __init__(self, task, llm):
+    def __init__(self, task, llm, controller=Controller()):
         self.llm = llm
         self.task = task
-        self.controller = Controller()
+        self.controller = controller
         # 初始化可能需要的配置
         self.message_manager = MessageManager(
             llm=llm,
