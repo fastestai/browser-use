@@ -2,6 +2,9 @@ from typing import List, Optional
 
 from browser_use.browser.views import BrowserState, TabInfo
 
+from langchain_core.messages import HumanMessage, SystemMessage
+
+
 
 import asyncio
 
@@ -191,12 +194,35 @@ class ApiService:
         return response
 
 
-
-
+class IsTargetPage(BaseModel):
+    result: bool
 async def main() -> None:
-    api = ApiService(task="Go to GMGN, search for 'Trump', buy 100 amount",
-                     llm=ChatOpenAI(model="gpt-4o"))
-    await api.get_next_actions()
+    current_page_url = "https://www.google.com/search?q=gmgn.ai&udm=14"
+    llm = ChatOpenAI(model_name="gpt-4o-mini")
+    plan_message = """
+    You are a precise browser automation agent that interacts with websites through structured commands. Your role is to:
+1. Analyze the provided webpage url
+2. Determine if you are already on the target page https://gmgn.ai
+3. Respond with valid JSON containing the result of determine
+
+INPUT STRUCTURE:
+Current URL: The webpage you're currently on 
+
+RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format: 
+{"result": true}
+    """
+    system_message = SystemMessage(content=plan_message)
+    human_message = HumanMessage(content=f"""
+    Current url: {current_page_url}
+    """)
+
+    msg = [system_message, human_message]
+
+    structured_llm = llm.with_structured_output(schema=IsTargetPage, include_raw=True, method="function_calling")
+    result = await structured_llm.ainvoke(msg)
+    print(result)
 
 if __name__ == '__main__':
     asyncio.run(main())
+
+
