@@ -46,6 +46,9 @@ class CheckTradeAction(BaseModel):
     coin_name: str
     amount: float
 
+class GetDataframe(BaseModel):
+    dataframe: dict
+
 
 @router.post("/get_next_action")
 async def get_next_action(request: ActionRequest):
@@ -130,5 +133,17 @@ async def check_target_page(request: CheckTargetPageRequest):
         result = await structured_llm.ainvoke(msg)
         print(result)
         return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/get_dataframe")
+async def get_dataframe(request: GetDataframe):
+    try:
+        data = request.dataframe
+        return {
+            "dataframe": data,
+            "text": "This is the token list {dataframe}"
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
