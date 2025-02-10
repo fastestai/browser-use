@@ -1,18 +1,23 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, AsyncGenerator
 from langchain_core.messages import BaseMessage
+from sse_starlette.sse import EventSourceResponse
+import asyncio
+import json
 
 from browser_use.agent.prompts import SystemPrompt
 from src.api.services.api_service import ApiService
 from langchain_openai import ChatOpenAI  # 或其他您使用的LLM
 from browser_use.browser.views import BrowserState, BrowserStateHistory, TabInfo
 from langchain_core.messages import HumanMessage, SystemMessage
+from src.api.services.monitor_service import MonitorService
 
 
 
 
 router = APIRouter()
+monitor_service = MonitorService()
 
 class ActionRequest(BaseModel):
     dom_tree: dict  # 用于接收消息历史
@@ -144,6 +149,47 @@ async def get_dataframe(request: GetDataframe):
         return {
             "dataframe": data,
             "text": "This is the token list {dataframe}"
-        }
+        }:wq
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+async def agent_progress_generator(request: Request) -> AsyncGenerator[str, None]:
+    """生成代理执行进度的事件流"""
+    try:
+        while True:
+            # 检查客户端是否断开连接
+            if await request.is_disconnected():
+                break
+
+            # 获取当前代理状态
+            # 这里需要从某个地方获取代理的实时状态
+            agent_state = {
+                "step": current_step,
+                "status": "running",
+                "current_action": current_action,
+                "last_result": last_result
+            }
+
+            # 发送事件
+            yield json.dumps(agent_state)
+            
+            # 等待一小段时间再发送下一个更新
+            await asyncio.sleep(1)
+    except Exception as e:
+        yield json.dumps({"status": "error", "message": str(e)})
+
+@router.get("/agent/monitor")
+async def monitor_agent(request: Request):
+    """SSE endpoint for monitoring agent progress"""
+    return EventSourceResponse(agent_progress_generator(request))
+
+@router.get("/agent/{agent_id}/monitor")
+async def monitor_agent(agent_id: str, request: Request):
+    """监控特定代理的SSE端点"""
+    async def event_generator():
+        async for update in monitor_service.get_agent_updates(agent_id):
+            if await request.is_disconnected():
+                break
+            yield json.dumps(update)
+
+    return EventSourceResponse(event_generator())
