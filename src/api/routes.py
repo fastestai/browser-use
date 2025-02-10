@@ -12,7 +12,7 @@ from langchain_openai import ChatOpenAI  # 或其他您使用的LLM
 from browser_use.browser.views import BrowserState, BrowserStateHistory, TabInfo
 from langchain_core.messages import HumanMessage, SystemMessage
 from src.api.services.monitor_service import MonitorService
-
+from src.api.services.monitor_service import DemoAgent
 
 
 
@@ -31,6 +31,9 @@ class CheckTargetPageRequest(BaseModel):
 
 class PlanRequest(BaseModel):
     llm: str
+
+class AgentRegisterRequest(BaseModel):
+    agent_id: str
 
 class Step(BaseModel):
     step_on: int
@@ -149,7 +152,7 @@ async def get_dataframe(request: GetDataframe):
         return {
             "dataframe": data,
             "text": "This is the token list {dataframe}"
-        }:wq
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -182,6 +185,16 @@ async def agent_progress_generator(request: Request) -> AsyncGenerator[str, None
 async def monitor_agent(request: Request):
     """SSE endpoint for monitoring agent progress"""
     return EventSourceResponse(agent_progress_generator(request))
+
+@router.post("/agent/register")
+async def register_agent(request: AgentRegisterRequest):
+    """SSE endpoint for monitoring agent progress"""
+    demo_agent = DemoAgent()
+    agent_id = request.agent_id
+    monitor_service.register_agent(agent_id, demo_agent)
+    await asyncio.sleep(1000)
+    demo_agent.stop()
+
 
 @router.get("/agent/{agent_id}/monitor")
 async def monitor_agent(agent_id: str, request: Request):
