@@ -427,7 +427,7 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
             status_code=500, 
             detail="Monitor Agent not found"
         )
-    agent.status_queue.put(content)
+    await agent.status_queue.put(content)
     return BrowserActionNlpResponse(
         status="success",
         message=f"start action: {content}"
@@ -512,15 +512,17 @@ async def chat(request: ChatMessage):
         content = "user target: " + request.content + "\n" + "current latest data: " + json.dumps(request.dataframe)
         content = content + "\n response format: the format oflatest data"
         fastapi = FastApi()
+        print("user_id", user_id)
         response = await fastapi.get_chat_response(user_id, content, gpt_id)
-        response_content = response.content
+        response_content = response.data["content"]
+        # return response_content
 
         # 根据消息类型处理
        
 
         return ChatResponse(
             content=response_content,
-            timestamp=datetime.now(),
+            timestamp=datetime.datetime.now(),
             status="success"
         )
 

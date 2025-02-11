@@ -64,6 +64,7 @@ class FastApi:
         """
         await self._ensure_session()
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        print("url", url)
         print("data", data)
         try:
             async with self.session.request(
@@ -73,6 +74,7 @@ class FastApi:
                 params=params
             ) as response:
                 response_data = await response.json()
+                print(response_data)
                 print("response_data",response_data)
                 
                 if response.status >= 400:
@@ -102,16 +104,16 @@ class FastApi:
             context: 上下文信息
         """
         data = {
-            "user_id": user_id,
-            "message": {
+            "user_id": None,
+            "messages": [{
                 "content": content,
                 "role": "user",
-                "timestamp": datetime.now().timestamp()
-            },
+                "timestamp": int(datetime.now().timestamp())
+            }],
             "gpt_id": gpt_id,
             "use_agent": False
         }
-        return await self._request("POST", "/api/v2/chat", data=data)
+        return await self._request("POST", "/v2/chat", data=data)
 
 
     async def close(self):

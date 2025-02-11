@@ -62,7 +62,17 @@ class MonitorService:
             del self.agents[agent_id]
 
     def get_agent(self, agent_id: str) -> BaseMonitorAgent:
+        """获取指定ID的代理实例
+        
+        Args:
+            agent_id: 代理ID
+            
+        Returns:
+            BaseMonitorAgent: 代理实例
+            
+        Raises:
+            KeyError: 当代理ID不存在时抛出
+        """
         if agent_id not in self.agents:
-            yield {"status": "error", "message": "Agent not found"}
-            return
+            raise KeyError(f"Agent not found: {agent_id}")
         return self.agents[agent_id]
