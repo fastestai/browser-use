@@ -497,9 +497,7 @@ async def chat(request: ChatMessage):
 
         成功响应:
             {
-                "content": "BTC的价格是 10000 美元",
-                "timestamp": "2024-01-28T12:34:56.789Z",
-                "status": "success"
+                "content": "BTC的价格是 10000 美元"
             }
     """
 
@@ -523,16 +521,16 @@ async def chat(request: ChatMessage):
         print("gpt_user_id", gpt_user_id)
         response = await fastapi.get_chat_response(gpt_user_id, content, gpt_id)
         response_content = pydash.get(response.data, 'content')
-        # return response_content
+        return response_content
 
         # 根据消息类型处理
        
 
-        return ChatResponse(
-            content=response_content,
-            timestamp=datetime.datetime.now(),
-            status="success"
-        )
+        # return ChatResponse(
+        #     content=response_content,
+        #     timestamp=datetime.datetime.now(),
+        #     status="success"
+        # )
 
     except asyncio.TimeoutError:
         raise HTTPException(
