@@ -8,36 +8,35 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 class ApiResponse(BaseModel):
-    """API 响应的基础模型"""
+    """Base model for API responses"""
     success: bool
     data: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     timestamp: datetime = datetime.now()
 
 class FastApi:
-    """外部 API 调用服务"""
+    """External API service for making HTTP requests"""
     
     def __init__(self, api_key: Optional[str] = None):
         """
-        初始化外部 API 服务
+        Initialize the external API service
         
         Args:
-            base_url: API 基础 URL
-            api_key: API 密钥（如果需要）
+            api_key: API key for authentication (if required)
         """
         self.base_url = 'https://api.fastest.ai'
         self.api_key = api_key
         self.session: Optional[aiohttp.ClientSession] = None
 
     async def _ensure_session(self):
-        """确保 aiohttp session 存在"""
+        """Ensure aiohttp session exists"""
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession(
                 headers=self._get_headers()
             )
 
     def _get_headers(self) -> Dict[str, str]:
-        """获取请求头"""
+        """Get request headers"""
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
@@ -54,13 +53,13 @@ class FastApi:
         params: Optional[Dict] = None
     ) -> ApiResponse:
         """
-        发送 HTTP 请求
+        Send HTTP request
         
         Args:
-            method: HTTP 方法 (GET, POST, etc.)
-            endpoint: API 端点
-            data: 请求体数据
-            params: URL 参数
+            method: HTTP method (GET, POST, etc.)
+            endpoint: API endpoint
+            data: Request body data
+            params: URL parameters
         """
         await self._ensure_session()
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
@@ -97,35 +96,41 @@ class FastApi:
 
     async def get_chat_response(self, user_id: str, content: str, gpt_id: str) -> ApiResponse:
         """
-        获取聊天响应
+        Get chat response from API
         
         Args:
-            message: 用户消息
-            context: 上下文信息
+            user_id: User identifier
+            content: Message content
+            gpt_id: GPT model identifier
         """
         data = {
-            "user_id": None,
             "messages": [{
                 "content": content,
                 "role": "user",
                 "timestamp": int(datetime.now().timestamp())
             }],
+            "user_id": user_id,
             "gpt_id": gpt_id,
             "use_agent": False
         }
+        print("data", data)
         return await self._request("POST", "/v2/chat", data=data)
 
+    async def create_gpt_user(self):
+        """Create a new GPT user"""
+        data = {}
+        return await self._request("POST", "/v1/user/create", data=data)
 
     async def close(self):
-        """关闭 session"""
+        """Close the session"""
         if self.session and not self.session.closed:
             await self.session.close()
 
     async def __aenter__(self):
-        """异步上下文管理器入口"""
+        """Async context manager entry point"""
         await self._ensure_session()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """异步上下文管理器出口"""
+        """Async context manager exit point"""
         await self.close()

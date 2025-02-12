@@ -8,20 +8,25 @@ from langchain_core.messages import BaseMessage
 from sse_starlette.sse import EventSourceResponse
 import asyncio
 import json
+import pydash
 
 from browser_use.agent.prompts import SystemPrompt
 from src.api.services.api_service import ApiService
 from langchain_openai import ChatOpenAI  # 或其他您使用的LLM
 from browser_use.browser.views import BrowserState, BrowserStateHistory, TabInfo
 from langchain_core.messages import HumanMessage, SystemMessage
-from src.api.services.monitor_service import MonitorService
-from src.api.services.monitor_service import BaseMonitorAgent
+from src.api.services.monitor_service import MonitorService, BrowserPluginMonitorAgent
 from src.api.proxy.fastapi import FastApi
 
 
 router = APIRouter(include_in_schema=False)
-public_router = APIRouter()
+public_router = APIRouter(
+    tags=["Tool"]  # 设置 API 分组标签为 Tool
+)
 monitor_service = MonitorService()
+
+fastapi = FastApi()
+
 
 class ActionRequest(BaseModel):
     """
@@ -58,20 +63,29 @@ class ActionRequest(BaseModel):
     )
 
 
-class BrowserActionNlpRequest(BaseModel):
-    """
-    浏览器动作的自然语言描述请求
-    """
+class ContextRequest(BaseModel):
+    gpt_id: str = Field(
+        ...,
+        description="gpt id",
+    ),
     user_id: str = Field(
         ...,
-        description="用户唯一标识",
-        example="user_123",
-        min_length=1
+        description="user id"
+    )
+
+
+class BrowserActionNlpRequest(BaseModel):
+    """
+    Request model for browser action natural language processing
+    """
+    context: ContextRequest = Field(
+        ...,
+        description="Context information",
     )
     content: str = Field(
         ...,
-        description="浏览器操作的自然语言描述",
-        example="点击页面上的登录按钮",
+        description="Natural language description of browser action",
+        example="Click the login button on the page",
         min_length=1
     )
 
@@ -91,23 +105,23 @@ class BrowserActionNlpResponse(BaseModel):
 
 class ChatMessage(BaseModel):
     """
-    聊天消息的数据结构
+    Chat message data structure
     """
-    user_id: str = Field(
+    co_instance_id: str = Field(
         ...,
-        description="用户唯一标识",
-        example="user_123",
+        description="Browser instance unique identifier",
+        example="39879879878979",
         min_length=1
     )
     content: str = Field(
         ...,
-        description="聊天内容",
-        example="你好，请帮我打开网页 example.com",
+        description="Chat content",
+        example="Hello, please help me open example.com",
         min_length=1
     )
     dataframe: List[dict] = Field(
         ...,
-        description="webpages dataframe"
+        description="Webpages dataframe data"
     )
 
 class ChatResponse(BaseModel):
@@ -328,7 +342,11 @@ async def register_agent(request: AgentRegisterRequest):
     agent_id = request.agent_id
     if agent_id in monitor_service.agents:
         return
-    monitor_agent = BaseMonitorAgent()
+    # todo production open
+    # create_gpt_result = await fastapi.create_gpt_user()
+    # user_id =create_gpt_result.data["user_id"]
+    user_id = '67ac39d50cef4ea4cf0df45b'
+    monitor_agent = BrowserPluginMonitorAgent(browser_plugin_id=agent_id, gpt_user_id=user_id)
     monitor_service.register_agent(agent_id, monitor_agent)
     return
 
@@ -345,89 +363,70 @@ async def monitor_agent(agent_id: str, request: Request):
     return EventSourceResponse(event_generator())
 
 
-@public_router.post(
-    "/tool/browser_action_nlp",
-    response_model=BrowserActionNlpResponse,
-    responses={
-        200: {
-            "description": "成功处理浏览器动作",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "status": "success",
-                        "message": "start action: 点击页面上的登录按钮"
-                    }
-                }
-            }
-        },
-        500: {
-            "description": "监控代理未找到",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Monitor Agent not found"
-                    }
-                }
-            }
-        }
-    }
-)
+@public_router.post("/tool/browser_action_nlp")
 async def browser_action_nlp(request: BrowserActionNlpRequest):
     """
-    处理浏览器动作的自然语言描述
+    Process natural language browser action descriptions
 
-    本接口用于接收自然语言形式的浏览器操作指令，并将其转发给对应的监控代理处理。
+    This endpoint receives natural language browser operation instructions 
+    and forwards them to the corresponding monitoring agent.
 
-    参数:
+    Parameters:
         request: BrowserActionNlpRequest
-            - user_id: 用户唯一标识，用于定位对应的监控代理
-            - content: 浏览器操作的自然语言描述，描述要执行的具体操作
+            - context: Context information
+                - gpt_id: GPT model ID
+                - user_id: User ID
+            - content: Natural language description of browser action
 
-    返回:
+    Returns:
         BrowserActionNlpResponse:
-            - status: 执行状态
-                - success: 操作已成功转发给监控代理
-                - error: 操作转发失败
-            - message: 执行消息，包含具体的操作描述
+            - status: Execution status
+                - success: Operation successfully forwarded
+                - error: Operation forwarding failed
+            - message: Execution message with operation details
 
-    错误:
+    Errors:
         500:
-            - 原因: Monitor Agent not found
-            - 说明: 找不到对应用户ID的监控代理
-            - 解决: 请确保先调用 /agent/register 注册监控代理
+            - Reason: Monitor Agent not found
+            - Description: No monitoring agent found for user ID
+            - Solution: Ensure /agent/register is called first
 
-    示例:
-        请求:
+    Example:
+        Request:
             POST /api/v1/tool/browser_action_nlp
             {
-                "user_id": "user_123",
-                "content": "点击页面上的登录按钮"
+                "context": {
+                    "gpt_id": "67ab0c86880303187f65d3a8",
+                    "user_id": "user_123"
+                },
+                "content": "Click the login button on the page"
             }
 
-        成功响应:
+        Success Response:
             {
                 "status": "success",
-                "message": "start action: 点击页面上的登录按钮"
+                "message": "start action: Click the login button on the page"
             }
 
-        错误响应:
-            {
-                "detail": "Monitor Agent not found"
-            }
-
-    注意:
-        - 请确保在调用此接口前已注册监控代理
-        - 自然语言描述应尽可能清晰和具体
+    Notes:
+        - Ensure monitoring agent is registered before calling
+        - Natural language description should be clear and specific
+        - Valid GPT ID and user ID are required
     """
     content = request.content
-    user_id = request.user_id
-    agent = monitor_service.get_agent(user_id)
-    if agent is None:
+    user_id = request.context.user_id
+    print("user_id:", user_id)
+    agents = monitor_service.get_agents()
+    for agent in agents.values():
+        print(agent.get_gpt_user_id())
+    match_agent = pydash.find(agents.values(), lambda a: a.get_gpt_user_id() == user_id)
+
+    if match_agent is None:
         raise HTTPException(
             status_code=500, 
             detail="Monitor Agent not found"
         )
-    await agent.status_queue.put(content)
+    await match_agent.status_queue.put(content)
     return BrowserActionNlpResponse(
         status="success",
         message=f"start action: {content}"
@@ -473,7 +472,7 @@ async def chat(request: ChatMessage):
 
     参数:
         request: ChatMessage
-            - user_id: 用户唯一标识，用于跟踪对话上下文
+            - co_instance_id: 插件唯一标识，用于跟踪对话上下文
             - content: 聊天内容
             - dataframe: 网页数据
     返回:
@@ -492,7 +491,7 @@ async def chat(request: ChatMessage):
         请求:
             POST /api/v1/chat
             {
-                "user_id": "user_123",
+                "co_instance_id": "co_123",
                 "content": "what is the price of BTC",
                 "dataframe": {}
             }
@@ -508,12 +507,19 @@ async def chat(request: ChatMessage):
 
     try:
         gpt_id = '67ab0c86880303187f65d3a8'
-        user_id = request.user_id
+
+        co_instance_id = request.co_instance_id
+        if co_instance_id not in monitor_service.get_agents():
+            raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process chat message: agent not found"
+        )
+        browser_plugin_instance = monitor_service.get_agent(co_instance_id)
+        gpt_user_id = browser_plugin_instance.get_gpt_user_id()
         content = "user target: " + request.content + "\n" + "current latest data: " + json.dumps(request.dataframe)
         content = content + "\n response format: the format oflatest data"
-        fastapi = FastApi()
-        print("user_id", user_id)
-        response = await fastapi.get_chat_response(user_id, content, gpt_id)
+        print("gpt_user_id", gpt_user_id)
+        response = await fastapi.get_chat_response(gpt_user_id, content, gpt_id)
         response_content = response.data["content"]
         # return response_content
 
