@@ -29,7 +29,7 @@ class FastApi:
         self.api_key = api_key
         self.session: Optional[aiohttp.ClientSession] = None
         # 设置默认超时时间（秒）
-        self.timeout = aiohttp.ClientTimeout(total=300)
+        self.timeout = aiohttp.ClientTimeout(total=3600)
 
     async def _ensure_session(self):
         """Ensure aiohttp session exists"""
@@ -130,7 +130,6 @@ class FastApi:
             "gpt_id": gpt_id,
             "use_agent": True
         }
-        print("data", data)
         return await self._request("POST", "/v2/chat", data=data)
 
     async def create_gpt_user(self):
