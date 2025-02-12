@@ -130,11 +130,11 @@ class ChatResponse(BaseModel):
     """
     content: str = Field(
         description="响应内容",
-        example="好的，我来帮您打开网页"
+        example="OK, I'll help you open the webpage"
     )
-    timestamp: datetime.datetime = Field(
+    timestamp: float = Field(
         description="响应时间戳",
-        example="2024-01-28T12:34:56.789Z"
+        example=1706443496.789
     )
     status: str = Field(
         description="响应状态",
@@ -433,37 +433,34 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
     )
 
 
-
-
 @router.post(
     "/chat",
     response_model=ChatResponse,
     responses={
         200: {
-            "description": "成功处理聊天消息",
+            "description": "Successfully processed chat message",
             "content": {
                 "application/json": {
                     "example": {
-                        "content": "好的，我来帮您打开网页",
-                        "timestamp": "2024-01-28T12:34:56.789Z",
+                        "content": "OK, I'll help you open the webpage",
+                        "timestamp": 1706443496.789,
                         "status": "success"
                     }
                 }
             }
         },
         500: {
-            "description": "处理失败",
+            "description": "Processing failed",
             "content": {
                 "application/json": {
                     "example": {
-                        "detail": "Failed to process chat message"
+                        "detail": "Request timed out"
                     }
                 }
             }
         }
     }
 )
-
 async def chat(request: ChatMessage):
     """
     处理用户聊天消息
@@ -504,33 +501,35 @@ async def chat(request: ChatMessage):
             }
     """
 
-
     try:
-        gpt_id = '67ab0c86880303187f65d3a8'
+        # 设置超时时间为30秒
+        async with asyncio.timeout(30):
+            gpt_id = '67ab0c86880303187f65d3a8'
 
-        co_instance_id = request.co_instance_id
-        if co_instance_id not in monitor_service.get_agents():
-            raise HTTPException(
+            co_instance_id = request.co_instance_id
+            if co_instance_id not in monitor_service.get_agents():
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to process chat message: agent not found"
+                )
+            browser_plugin_instance = monitor_service.get_agent(co_instance_id)
+            gpt_user_id = browser_plugin_instance.get_gpt_user_id()
+            content = f'user nlp: {request.content}, dataframe: {request.dataframe}'
+            print("gpt_user_id", gpt_user_id)
+            response = await fastapi.get_chat_response(gpt_user_id, content, gpt_id)
+            response_content = response.data["content"]
+
+            return ChatResponse(
+                content=response_content,
+                timestamp=datetime.datetime.now().timestamp(),
+                status="success"
+            )
+
+    except asyncio.TimeoutError:
+        raise HTTPException(
             status_code=500,
-            detail=f"Failed to process chat message: agent not found"
+            detail="Request timed out after 30 seconds"
         )
-        browser_plugin_instance = monitor_service.get_agent(co_instance_id)
-        gpt_user_id = browser_plugin_instance.get_gpt_user_id()
-        content = f'user nlp: {request.content}, dataframe: {request.dataframe}'
-        print("gpt_user_id", gpt_user_id)
-        response = await fastapi.get_chat_response(gpt_user_id, content, gpt_id)
-        response_content = response.data["content"]
-        # return response_content
-
-        # 根据消息类型处理
-       
-
-        return ChatResponse(
-            content=response_content,
-            timestamp=datetime.datetime.now(),
-            status="success"
-        )
-
     except Exception as e:
         print(e)
         raise HTTPException(
