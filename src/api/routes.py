@@ -516,8 +516,7 @@ async def chat(request: ChatMessage):
         )
         browser_plugin_instance = monitor_service.get_agent(co_instance_id)
         gpt_user_id = browser_plugin_instance.get_gpt_user_id()
-        content = "user target: " + request.content + "\n" + "current latest data: " + json.dumps(request.dataframe)
-        content = content + "\n response format: the format oflatest data"
+        content = f'user nlp: {request.content}, dataframe: {request.dataframe}'
         print("gpt_user_id", gpt_user_id)
         response = await fastapi.get_chat_response(gpt_user_id, content, gpt_id)
         response_content = response.data["content"]
