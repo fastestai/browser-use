@@ -435,34 +435,7 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
 
 
 
-@router.post(
-    "/chat",
-    response_model=ChatResponse,
-    responses={
-        200: {
-            "description": "Successfully processed chat message",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "content": "OK, I'll help you open the webpage",
-                        "timestamp": 1706443496.789,
-                        "status": "success"
-                    }
-                }
-            }
-        },
-        500: {
-            "description": "Processing failed",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Request timed out"
-                    }
-                }
-            }
-        }
-    }
-)
+@router.post( "/chat")
 async def chat(request: ChatMessage):
     """
     处理用户聊天消息
@@ -474,18 +447,6 @@ async def chat(request: ChatMessage):
             - co_instance_id: 插件唯一标识，用于跟踪对话上下文
             - content: 聊天内容
             - dataframe: 网页数据
-    返回:
-        ChatResponse:
-            - content: 响应内容
-            - timestamp: 响应时间戳
-            - status: 响应状态
-
-    错误:
-        500:
-            - 原因: Failed to process chat message
-            - 说明: 消息处理失败
-            - 解决: 请检查消息格式和系统状态
-
     示例:
         请求:
             POST /api/v1/chat
@@ -493,11 +454,6 @@ async def chat(request: ChatMessage):
                 "co_instance_id": "co_123",
                 "content": "what is the price of BTC",
                 "dataframe": {}
-            }
-
-        成功响应:
-            {
-                "content": "BTC的价格是 10000 美元"
             }
     """
 
