@@ -459,7 +459,7 @@ async def chat(request: ChatMessage):
 
 
     try:
-        gpt_id = '67ab0c86880303187f65d3a8'
+        gpt_id = '67acc197140b250260ff8b68'
 
         co_instance_id = request.co_instance_id
         if co_instance_id not in monitor_service.get_agents():
