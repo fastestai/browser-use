@@ -128,7 +128,7 @@ class FastApi:
             }],
             "user_id": user_id,
             "gpt_id": gpt_id,
-            "use_agent": False
+            "use_agent": True
         }
         return await self._request("POST", "/v2/chat", data=data)
 
