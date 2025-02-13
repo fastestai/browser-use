@@ -343,7 +343,7 @@ async def register_agent(request: AgentRegisterRequest):
     if agent_id in monitor_service.agents:
         return
     # todo production open
-    # create_gpt_result = await fastapi.create_gpt_user()
+    create_gpt_result = await fastapi.create_gpt_user()
     # user_id =create_gpt_result.data["user_id"]
     user_id = '67ac39d50cef4ea4cf0df45b'
     monitor_agent = BrowserPluginMonitorAgent(browser_plugin_id=agent_id, gpt_user_id=user_id)
@@ -377,32 +377,6 @@ async def monitor_agent(agent_id: str, request: Request):
                     }
                 }
             }
-        },
-        500: {
-            "description": "Monitor Agent not found",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Monitor Agent not found"
-                    }
-                }
-            }
-        },
-        422: {
-            "description": "Validation Error",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": [
-                            {
-                                "loc": ["body", "content"],
-                                "msg": "field required",
-                                "type": "value_error.missing"
-                            }
-                        ]
-                    }
-                }
-            }
         }
     }
 )
@@ -424,16 +398,6 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
         BrowserActionNlpResponse:
             - status: Execution status (success/error)
             - message: Execution message with operation details
-
-    Errors:
-        500:
-            - Reason: Monitor Agent not found
-            - Description: No monitoring agent found for user ID
-            - Solution: Ensure /agent/register is called first
-        422:
-            - Reason: Validation Error
-            - Description: Request body validation failed
-            - Solution: Check request format and required fields
 
     Example:
         Request:
@@ -462,8 +426,9 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
         - Natural language description should be clear and specific
         - Valid GPT ID and user ID are required
     """
-    content = request.content
     user_id = request.context.user_id
+    content = request.content
+    print("content", content)
     print("user_id:", user_id)
     agents = monitor_service.get_agents()
     for agent in agents.values():
@@ -508,7 +473,7 @@ async def chat(request: ChatMessage):
 
 
     try:
-        gpt_id = '67acc197140b250260ff8b68'
+        gpt_id = '67ad8db09d6468c15537fb8c'
 
         co_instance_id = request.co_instance_id
         if co_instance_id not in monitor_service.get_agents():

@@ -128,7 +128,7 @@ class FastApi:
             }],
             "user_id": user_id,
             "gpt_id": gpt_id,
-            "use_agent": False
+            "use_agent": True
         }
         return await self._request("POST", "/v2/chat", data=data)
 
@@ -142,7 +142,7 @@ class FastApi:
         data = {
           "name": "string",
           "profile": {
-            "persona": "You are a professional meme coin investor and trader"
+            "persona": "You are a professional meme coin trader"
             }
         }
         return await self._request("POST",'/v1/gpt/create', data=data)
@@ -159,41 +159,8 @@ class FastApi:
         data ={
             "tools_config": {
                 "gpt_id": gpt_id,
-                "host": "http：//43.134.24.146:18000",
-                "openapi_config": {"openapi": "3.1.0", "info": {"title": "API Service", "version": "0.1.0"}, "paths": {
-                    "/api/v1/tool/browser_action_nlp": {"post": {"tags": ["Tool"], "summary": "Browser Action Nlp",
-                                                                 "description": "Process natural language browser action descriptions\n\nThis endpoint receives natural language browser operation instructions \nand forwards them to the corresponding monitoring agent.\n\nParameters:\n    request: BrowserActionNlpRequest\n        - context: Context information\n            - gpt_id: GPT model ID\n            - user_id: User ID\n        - content: Natural language description of browser action\n\nReturns:\n    BrowserActionNlpResponse:\n        - status: Execution status\n            - success: Operation successfully forwarded\n            - error: Operation forwarding failed\n        - message: Execution message with operation details\n\nErrors:\n    500:\n        - Reason: Monitor Agent not found\n        - Description: No monitoring agent found for user ID\n        - Solution: Ensure /agent/register is called first\n\nExample:\n    Request:\n        POST /api/v1/tool/browser_action_nlp\n        {\n            \"context\": {\n                \"gpt_id\": \"67ab0c86880303187f65d3a8\",\n                \"user_id\": \"user_123\"\n            },\n            \"content\": \"Click the login button on the page\"\n        }\n\n    Success Response:\n        {\n            \"status\": \"success\",\n            \"message\": \"start action: Click the login button on the page\"\n        }\n\nNotes:\n    - Ensure monitoring agent is registered before calling\n    - Natural language description should be clear and specific\n    - Valid GPT ID and user ID are required",
-                                                                 "operationId": "browser_action_nlp_api_v1_tool_browser_action_nlp_post",
-                                                                 "requestBody": {"content": {"application/json": {
-                                                                     "schema": {
-                                                                         "$ref": "#/components/schemas/BrowserActionNlpRequest"}}},
-                                                                                 "required": True}, "responses": {
-                            "200": {"description": "Successful Response",
-                                    "content": {"application/json": {"schema": {}}}},
-                            "422": {"description": "Validation Error", "content": {"application/json": {
-                                "schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}}, "components": {
-                    "schemas": {"BrowserActionNlpRequest": {"properties": {
-                        "context": {"$ref": "#/components/schemas/ContextRequest",
-                                    "description": "Context information"},
-                        "content": {"type": "string", "minLength": 1, "title": "Content",
-                                    "description": "Natural language description of browser action",
-                                    "example": "Click the login button on the page"}}, "type": "object",
-                                                            "required": ["context", "content"],
-                                                            "title": "BrowserActionNlpRequest",
-                                                            "description": "Request model for browser action natural language processing"},
-                                "ContextRequest": {"properties": {"gpt_id": {"type": "string", "title": "Gpt Id"},
-                                                                  "user_id": {"type": "string", "title": "User Id",
-                                                                              "description": "user id"}},
-                                                   "type": "object", "required": ["user_id"],
-                                                   "title": "ContextRequest"}, "HTTPValidationError": {"properties": {
-                            "detail": {"items": {"$ref": "#/components/schemas/ValidationError"}, "type": "array",
-                                       "title": "Detail"}}, "type": "object", "title": "HTTPValidationError"},
-                                "ValidationError": {"properties": {
-                                    "loc": {"items": {"anyOf": [{"type": "string"}, {"type": "integer"}]},
-                                            "type": "array", "title": "Location"},
-                                    "msg": {"type": "string", "title": "Message"},
-                                    "type": {"type": "string", "title": "Error Type"}}, "type": "object",
-                                                    "required": ["loc", "msg", "type"], "title": "ValidationError"}}}}
+                "host": "http://43.134.24.146:18000",
+                "openapi_config": {"openapi":"3.1.0","info":{"title":"API Service","version":"0.1.0"},"paths":{"/api/v1/tool/browser_action_nlp":{"post":{"tags":["Tool"],"summary":"Browser Action Nlp","description":"Process natural language browser action descriptions\n\nThis endpoint receives natural language browser operation instructions \nand forwards them to the corresponding monitoring agent.\n\nParameters:\n    request: BrowserActionNlpRequest\n        - context: Context information\n            - gpt_id: GPT model ID\n            - user_id: User ID\n        - content: Natural language description of browser action\n\nReturns:\n    BrowserActionNlpResponse:\n        - status: Execution status (success/error)\n        - message: Execution message with operation details\n\nExample:\n    Request:\n        POST /api/v1/tool/browser_action_nlp\n        {\n            \"context\": {\n                \"gpt_id\": \"67ab0c86880303187f65d3a8\",\n                \"user_id\": \"user_123\"\n            },\n            \"content\": \"Click the login button on the page\"\n        }\n\n    Success Response:\n        {\n            \"status\": \"success\",\n            \"message\": \"start action: Click the login button on the page\"\n        }\n\n    Error Response:\n        {\n            \"detail\": \"Monitor Agent not found\"\n        }\n\nNotes:\n    - Ensure monitoring agent is registered before calling\n    - Natural language description should be clear and specific\n    - Valid GPT ID and user ID are required","operationId":"browser_action_nlp_api_v1_tool_browser_action_nlp_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/BrowserActionNlpRequest"}}},"required":True},"responses":{"200":{"description":"Successfully processed browser action","content":{"application/json":{"schema":{"$ref":"#/components/schemas/BrowserActionNlpResponse"},"example":{"status":"success","message":"start action: Click the login button on the page"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}}},"components":{"schemas":{"BrowserActionNlpRequest":{"properties":{"context":{"$ref":"#/components/schemas/ContextRequest","description":"Context information"},"content":{"type":"string","minLength":1,"title":"Content","description":"Natural language description of browser action","example":"Click the login button on the page"}},"type":"object","required":["context","content"],"title":"BrowserActionNlpRequest","description":"Request model for browser action natural language processing"},"BrowserActionNlpResponse":{"properties":{"status":{"type":"string","enum":["success","error"],"title":"Status","description":"执行状态","example":"success"},"message":{"type":"string","title":"Message","description":"执行消息","example":"start action: 点击页面上的登录按钮"}},"type":"object","required":["status","message"],"title":"BrowserActionNlpResponse","description":"浏览器动作执行响应"},"ContextRequest":{"properties":{"gpt_id":{"type":"string","title":"Gpt Id"},"user_id":{"type":"string","title":"User Id","description":"user id"}},"type":"object","required":["user_id"],"title":"ContextRequest"},"HTTPValidationError":{"properties":{"detail":{"items":{"$ref":"#/components/schemas/ValidationError"},"type":"array","title":"Detail"}},"type":"object","title":"HTTPValidationError"},"ValidationError":{"properties":{"loc":{"items":{"anyOf":[{"type":"string"},{"type":"integer"}]},"type":"array","title":"Location"},"msg":{"type":"string","title":"Message"},"type":{"type":"string","title":"Error Type"}},"type":"object","required":["loc","msg","type"],"title":"ValidationError"}}}}
             }
         }
         return await self._request("POST", '/v1/gpt/register_tools', data=data)
@@ -214,8 +181,10 @@ class FastApi:
 
 
 async def main():
-    gpt_id = "67acc197140b250260ff8b68"
-    # agent_configs = [
+    # gpt_id = "67acc197140b250260ff8b68"
+
+
+    agent_configs = [
     #     {
     #         "name": "planning_agent",
     #         "description": "This is the first agent to work. This agent acts as a central planner, receiving user instructions and delegating tasks to other specialized agents to fulfill the request.It's responsible for breaking down complex tasks into manageable steps and ensuring each agent works in a coordinated manner.",
@@ -290,27 +259,25 @@ async def main():
     #         "tools": ["google_search"]
     #         , "model": "gpt-4o"
     #     },
-    #     {
-    #         "name": "execution_agent",
-    #         "description": " Work only mentioned in the the plan from planning_agen. Then Understand report from research_agent and risk_agent and nlp from user, provide the execution action for trading",
-    #         "system_message": '''
-    #             ### Role Description
-    #               You are preofessional trading agent who make investment decision and generate an execution action.. Do not proceed until you get the delegate plan from planning_agent
-    #            ### Workflow
-    #             1. generate an execution action by research_agent and risk_agent or user nlp
-    #             2. build the request by the request schema of tool and execution action
-    #             3. call the tool
-    #             3. Wait for operation result
-    #             ### Input
-    #             *   report from research_agent and risk_agent
-    #             *   nlp from user
-    #             ### Output
-    #             *  action result and format as the response schema of tool
-    #             "
-    #         '''
-    #         , "tools": ["browser_action_nlp"]
-    #         , "model": "gpt-4o"
-    #     }
+        {
+            "name": "execution_agent",
+            "description": " You call tool by user provide action trade nlp",
+            "system_message": '''
+                ### Role Description
+                  You are preofessional trading agent who call action tool.. 
+               ### Workflow
+                1. build the request by the request schema of tool and execution action by user provide action trade nlp
+                3. call the tool
+                3. Wait for operation result
+                ### Input
+                *   nlp from user
+                ### Output
+                *  action result and format as the response schema of tool
+                "
+            '''
+            , "tools": ["browser_action_nlp"]
+            , "model": "gpt-4o"
+        }
     #     ,
     #     #  {
     #     #   "name": "accounting_agent",
@@ -327,72 +294,24 @@ async def main():
     #     #     *  return a report on the accounting and portfolio tracking, on daily basis
     #     # '''
     #     # }
-    # ]
-
-    agent_configs = agent_configs = [
-    {
-        "name": "planning_agent",
-        "description": "This is the first agent to work. This agent acts as a central planner, receiving user instructions and delegating tasks to other specialized agents to fulfill the request.It's responsible for breaking down complex tasks into manageable steps and ensuring each agent works in a coordinated manner.",
-        "system_message": ''' 
-            ### Role Description
-               You are an Investment Planning Agent. 
-               Your primary goal is to understand user instructions and create a comprehensive plan, delegating sub-tasks to specialized agents for execution. 
-               You ensure a smooth and efficient workflow from initial request to final execution.
-
-            ### Abilities:
-            *   Understand user investment instructions and identify the user's intent.
-            *   Break down complex instructions into smaller, manageable tasks.
-            *   Delegate tasks to specialized agents
-            *   Orchestrate the workflow between agents, ensuring each task is completed in the correct order.
-
-            ### Use Cases & Delegation Plans:
-
-            **1. Research-Only Request (e.g., "what tokens to buy", "research trending meme coins")**
-                *   Use Case: Research
-                *   Agents to work: researcher_agent
-                *   Output Format for researcher_agent:  "On top: [Explanation of research steps]. [Report with listed items and basic information (token address, price, marketcap for crypto; ticker, price, marketcap for stocks)]"
-
-            **2. Research & Execution Request (e.g., "buy $1000 hot memecoins", "invest $500 in trending tech stocks")**
-                *   Use Case: Research & Execution
-                *   Agents to work: researcher_agent, risk_agent, execution_agent
-                *   Output Format for researcher_agent: "On top: [Explanation of research steps]. [Report with listed items and basic information]"
-                *   Output Format for risk_agent: "On top: [Assessment of investment product list]. [Risk report]"
-                *   Output Format for execution_agent: "[Action result formatted as the response schema of the tool]"
-
-            **3. Direct Execution Request (e.g., "buy $1000 $Trump", "sell 10 shares of AAPL")**
-                *   Use Case: Direct Execution
-                *   Agents to work: execution_agent
-                *   Output Format for execution_agent: "[Action result formatted as the response schema of the tool]"
-
-            ### Workflow  
-            1. Receive User Instruction.
-            2. Identify the appropriate Use Case based on the instruction.
-            3. Delegate tasks to the corresponding agents according to the chosen Use Case.
-            4. Clearly specify the required output format for each agent to ensure proper data flow.
-
-            ### Input 
-            *   User investment instruction 
-
-            ### Output
-            *   Response Format: Valid Json
-            *   Top: Use Case identified.
-            *   Delegation Plan (list of agents to work and their expected output formats).
-
-            **Example:**
-
-            **User Instruction:** "buy $1000 hot memecoins"
-
-            **Output:**
-            '{user_case:2}'
-        ''',
-    },
-    # ... (rest of the agent configurations remain the same)
-]
+    ]
     fastapi = FastApi()
-
-    for c in agent_configs:
-        result = await fastapi.create_agent(agent_conf=c, gpt_id=gpt_id)
-        print(result)
+    # gpt_id = await fastapi.create_gpt()
+    # print("gpt_id", gpt_id)
+    # gpt_user_id = await fastapi.create_gpt_user()
+    gpt_id = '67ad8db09d6468c15537fb8c'
+    gpt_user_id = '67ad8bc79d6468c15537fb81'
+    register_result = await fastapi.gpt_register_tool(gpt_id)
+    print("register_result", register_result)
+    # for c in agent_configs:
+    #     result = await fastapi.create_agent(agent_conf =c, gpt_id=gpt_id)
+    #     print(result)
+    content = 'I buy 0.01 trump'
+    chat_result = await fastapi.get_chat_response(user_id=gpt_user_id,content=content,gpt_id=gpt_id)
+    print(chat_result)
+    # for c in agent_configs:
+    #     result = await fastapi.create_agent(agent_conf=c, gpt_id=gpt_id)
+    #     print(result)
 
 
 if __name__ == '__main__':
