@@ -363,7 +363,49 @@ async def monitor_agent(agent_id: str, request: Request):
     return EventSourceResponse(event_generator())
 
 
-@public_router.post("/tool/browser_action_nlp")
+@public_router.post(
+    "/tool/browser_action_nlp",
+    response_model=BrowserActionNlpResponse,
+    responses={
+        200: {
+            "description": "Successfully processed browser action",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "success",
+                        "message": "start action: Click the login button on the page"
+                    }
+                }
+            }
+        },
+        500: {
+            "description": "Monitor Agent not found",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Monitor Agent not found"
+                    }
+                }
+            }
+        },
+        422: {
+            "description": "Validation Error",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": [
+                            {
+                                "loc": ["body", "content"],
+                                "msg": "field required",
+                                "type": "value_error.missing"
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+)
 async def browser_action_nlp(request: BrowserActionNlpRequest):
     """
     Process natural language browser action descriptions
@@ -380,9 +422,7 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
 
     Returns:
         BrowserActionNlpResponse:
-            - status: Execution status
-                - success: Operation successfully forwarded
-                - error: Operation forwarding failed
+            - status: Execution status (success/error)
             - message: Execution message with operation details
 
     Errors:
@@ -390,6 +430,10 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
             - Reason: Monitor Agent not found
             - Description: No monitoring agent found for user ID
             - Solution: Ensure /agent/register is called first
+        422:
+            - Reason: Validation Error
+            - Description: Request body validation failed
+            - Solution: Check request format and required fields
 
     Example:
         Request:
@@ -406,6 +450,11 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
             {
                 "status": "success",
                 "message": "start action: Click the login button on the page"
+            }
+
+        Error Response:
+            {
+                "detail": "Monitor Agent not found"
             }
 
     Notes:
