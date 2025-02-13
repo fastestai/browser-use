@@ -299,16 +299,16 @@ async def main():
     # gpt_id = await fastapi.create_gpt()
     # print("gpt_id", gpt_id)
     # gpt_user_id = await fastapi.create_gpt_user()
-    gpt_id = '67ad8db09d6468c15537fb8c'
+    gpt_id = '67ae1a87d0b370cc4c94a9e4'
     gpt_user_id = '67ad8bc79d6468c15537fb81'
     register_result = await fastapi.gpt_register_tool(gpt_id)
     print("register_result", register_result)
-    # for c in agent_configs:
-    #     result = await fastapi.create_agent(agent_conf =c, gpt_id=gpt_id)
-    #     print(result)
-    content = 'I buy 0.01 trump'
-    chat_result = await fastapi.get_chat_response(user_id=gpt_user_id,content=content,gpt_id=gpt_id)
-    print(chat_result)
+    for c in agent_configs:
+        result = await fastapi.create_agent(agent_conf =c, gpt_id=gpt_id)
+        print(result)
+    # content = 'I buy 0.01 trump'
+    # chat_result = await fastapi.get_chat_response(user_id=gpt_user_id,content=content,gpt_id=gpt_id)
+    # print(chat_result)
     # for c in agent_configs:
     #     result = await fastapi.create_agent(agent_conf=c, gpt_id=gpt_id)
     #     print(result)
