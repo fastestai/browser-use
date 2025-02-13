@@ -128,7 +128,7 @@ class FastApi:
             }],
             "user_id": user_id,
             "gpt_id": gpt_id,
-            "use_agent": True
+            "use_agent": False
         }
         return await self._request("POST", "/v2/chat", data=data)
 
@@ -148,10 +148,11 @@ class FastApi:
         return await self._request("POST",'/v1/gpt/create', data=data)
 
     async def create_agent(self, agent_conf: dict, gpt_id: str):
+        agent_conf.update({'gpt_id': gpt_id})
         data ={
-            "agent_config": agent_conf,
-            "gpt_id": gpt_id
+            "agent_config": agent_conf
         }
+        print(agent_conf)
         return await self._request("POST", '/v1/agent/create', data=data)
 
     async def gpt_register_tool(self, gpt_id: str):
@@ -214,119 +215,179 @@ class FastApi:
 
 async def main():
     gpt_id = "67acc197140b250260ff8b68"
-    agent_configs = [
-        {
-            "name": "planning_agent",
-            "description": "This is the first agent to work. This agent acts as a central planner, receiving user instructions and delegating tasks to other specialized agents to fulfill the request.It's responsible for breaking down complex tasks into manageable steps and ensuring each agent works in a coordinated manner.",
-            "system_message": ''' 
-                ### Role Description
-                   You are an Investment Planning Agent. 
-                   Your primary goal is to understand user instructions and create a comprehensive plan, delegating sub-tasks to specialized agents for execution. 
-                   You ensure a smooth and efficient workflow from initial request to final execution.
-                ### Abilities:
-                *   Understand user investment instructions and identify the user's intent.
-                *   Break down complex instructions into smaller, manageable tasks.
-                *   Delegate tasks to specialized agents
-                *   Orchestrate the workflow between agents, ensuring each task is completed in the correct order.
-                ### Use Cese
-                * 1. delegate only researcher_agent to generate a list of token when user instruction is similar to "what tokens to buy" where only research is required
-                * 2. delegate  researcher_agent,risk_agent and execution_agent to generate the final execution plan when user instruction is similar to "buy $1000 hot memecoins" where research and execution is required
-                * 3. delegate only execution_agent to generate execution plan and use the tool to trade when user instruction is similar to "buy $1000 $Trump" where the instruction is clear without research need
-               ### Workflow  
-                1. Receive User Instruction and Understand which  Use Case should be chosen
-                2. Delegate Agents to work with plan initiated
-                3. Make it clear for every agent to return required reply
-                ### Input 
-                *   User investment instruction 
-                ### Output
-                *  Top top, tell me which Use Case falls in and Tell me Delegation Plan.
-                example:
-                1. Use Case:
-                2. Agents to work : 
-            ''',
-        },
+    # agent_configs = [
+    #     {
+    #         "name": "planning_agent",
+    #         "description": "This is the first agent to work. This agent acts as a central planner, receiving user instructions and delegating tasks to other specialized agents to fulfill the request.It's responsible for breaking down complex tasks into manageable steps and ensuring each agent works in a coordinated manner.",
+    #         "system_message": '''
+    #             ### Role Description
+    #                You are an Investment Planning Agent.
+    #                Your primary goal is to understand user instructions and create a comprehensive plan, delegating sub-tasks to specialized agents for execution.
+    #                You ensure a smooth and efficient workflow from initial request to final execution.
+    #             ### Abilities:
+    #             *   Understand user investment instructions and identify the user's intent.
+    #             *   Break down complex instructions into smaller, manageable tasks.
+    #             *   Delegate tasks to specialized agents
+    #             *   Orchestrate the workflow between agents, ensuring each task is completed in the correct order.
+    #             ### Use Cese
+    #             * 1. delegate only researcher_agent to generate a list of token when user instruction is similar to "what tokens to buy" where only research is required
+    #             * 2. delegate  researcher_agent,risk_agent and execution_agent to generate the final execution plan when user instruction is similar to "buy $1000 hot memecoins" where research and execution is required
+    #             * 3. delegate only execution_agent to generate execution plan and use the tool to trade when user instruction is similar to "buy $1000 $Trump" where the instruction is clear without research need
+    #            ### Workflow
+    #             1. Receive User Instruction and Understand which  Use Case should be chosen
+    #             2. Delegate Agents to work with plan initiated
+    #             3. Make it clear for every agent to return required reply
+    #             ### Input
+    #             *   User investment instruction
+    #             ### Output
+    #             *  Top top, tell me which Use Case falls in and Tell me Delegation Plan.
+    #             example:
+    #             1. Use Case:
+    #             2. Agents to work :
+    #         ''',
+    #     },
+    #
+    #     {
+    #         "name": "researcher_agent",
+    #         "description": " Work until you get the plan from planning_agent. Then Understand user's instruction and conduct research and analysis.Do not pass your result if you have not done the ranking.",
+    #         "system_message": '''
+    #             ### Role Description
+    #               You are a reseacher based on user's instruction to generate researcher report. Do not proceed until you get the delegate plan from planning_agent
+    #            ### Workflow
+    #             1. Use the tool of 'trends' to find inevestment product by category and platform from user instruction
+    #                , break down into dimentions
+    #                 1.1  Category: such as meme / token  / wallet  / trade
+    #                 1.2 Platform: Gmgn as defualt is not mentioned by user
+    #             2. Filter & Rank
+    #               2.1 based on result from 1, do the filter according to user instruction from report from planning_agent
+    #             3. List all information
+    #             ### Input
+    #             *   User investment instruction
+    #             ### Output
+    #             1. On top: you MUST Explain every step you did
+    #             2. and Return with a report with the listed item and basic information of each
+    #               2.1 for crypto , basic information includes the token address, price, marketcap
+    #               2.2 for stock, basic information includes ticket , price and marketcap
+    #         ''',
+    #         "tools": ["trends"]
+    #         , "model": "gpt-4o"
+    #     },
+    #     {
+    #         "name": "risk_agent",
+    #         "description": "Work only mentioned in the the plan from planning_agen. Understand the risk of the result from researcher_agent.You cannot proceed with no list of ranking.",
+    #         "system_message": '''
+    #             ### Role Description
+    #               You are a risk agent based on user's instruction and the report from researcher_agent.. Do not proceed until you get the delegate plan from planning_agent
+    #            ### Workflow
+    #             1. Provide your understanding of the selected investment target
+    #             2. Explain the risk and generate a report
+    #             ### Input
+    #             *   report from researcher_agent
+    #             ### Output
+    #             1.  On top: you must tell me whether a list of investment products you have get from
+    #             2.  Return me with a risk report
+    #         ''',
+    #         "tools": ["google_search"]
+    #         , "model": "gpt-4o"
+    #     },
+    #     {
+    #         "name": "execution_agent",
+    #         "description": " Work only mentioned in the the plan from planning_agen. Then Understand report from research_agent and risk_agent and nlp from user, provide the execution action for trading",
+    #         "system_message": '''
+    #             ### Role Description
+    #               You are preofessional trading agent who make investment decision and generate an execution action.. Do not proceed until you get the delegate plan from planning_agent
+    #            ### Workflow
+    #             1. generate an execution action by research_agent and risk_agent or user nlp
+    #             2. build the request by the request schema of tool and execution action
+    #             3. call the tool
+    #             3. Wait for operation result
+    #             ### Input
+    #             *   report from research_agent and risk_agent
+    #             *   nlp from user
+    #             ### Output
+    #             *  action result and format as the response schema of tool
+    #             "
+    #         '''
+    #         , "tools": ["browser_action_nlp"]
+    #         , "model": "gpt-4o"
+    #     }
+    #     ,
+    #     #  {
+    #     #   "name": "accounting_agent",
+    #     #   "description": "Work only mentioned in the the plan from planning_agen. Then Do accounting after the trades are closed and make Portfolio Tracing",
+    #     #   "system_message": '''
+    #     #     ### Role Description
+    #     #       You are a preofessional accountant who can do post-investment. Do not proceed until you get the delegate plan from planning_agent
+    #     #    ### Workflow
+    #     #     1.  Do accounting
+    #     #     2. Do portfolio tracking
+    #     #     ### Input
+    #     #     *   get the investment params
+    #     #     ### Output
+    #     #     *  return a report on the accounting and portfolio tracking, on daily basis
+    #     # '''
+    #     # }
+    # ]
 
-        {
-            "name": "researcher_agent",
-            "description": " Work until you get the plan from planning_agent. Then Understand user's instruction and conduct research and analysis.Do not pass your result if you have not done the ranking.",
-            "system_message": ''' 
-                ### Role Description
-                  You are a reseacher based on user's instruction to generate researcher report. Do not proceed until you get the delegate plan from planning_agent
-               ### Workflow  
-                1. Use the tool of 'trends' to find inevestment product by category and platform from user instruction
-                   , break down into dimentions
-                    1.1  Category: such as meme / token  / wallet  / trade
-                    1.2 Platform: Gmgn as defualt is not mentioned by user
-                2. Filter & Rank
-                  2.1 based on result from 1, do the filter according to user instruction from report from planning_agent
-                3. List all information 
-                ### Input 
-                *   User investment instruction 
-                ### Output
-                1. On top: you MUST Explain every step you did
-                2. and Return with a report with the listed item and basic information of each
-                  2.1 for crypto , basic information includes the token address, price, marketcap
-                  2.2 for stock, basic information includes ticket , price and marketcap
-            ''',
-            "tools": ["trends"]
-            , "model": "gpt-4o"
-        },
-        {
-            "name": "risk_agent",
-            "description": "Work only mentioned in the the plan from planning_agen. Understand the risk of the result from researcher_agent.You cannot proceed with no list of ranking.",
-            "system_message": ''' 
-                ### Role Description
-                  You are a risk agent based on user's instruction and the report from researcher_agent.. Do not proceed until you get the delegate plan from planning_agent
-               ### Workflow  
-                1. Provide your understanding of the selected investment target
-                2. Explain the risk and generate a report
-                ### Input 
-                *   report from researcher_agent
-                ### Output
-                1.  On top: you must tell me whether a list of investment products you have get from
-                2.  Return me with a risk report 
-            ''',
-            "tools": ["google_search"]
-            , "model": "gpt-4o"
-        },
-        {
-            "name": "execution_agent",
-            "description": " Work only mentioned in the the plan from planning_agen. Then Understand report from research_agent and risk_agent and nlp from user, provide the execution action for trading",
-            "system_message": ''' 
-                ### Role Description
-                  You are preofessional trading agent who make investment decision and generate an execution action.. Do not proceed until you get the delegate plan from planning_agent
-               ### Workflow  
-                1. generate an execution action by research_agent and risk_agent or user nlp
-                2. build the request by the request schema of tool and execution action 
-                3. call the tool
-                3. Wait for operation result 
-                ### Input 
-                *   report from research_agent and risk_agent
-                *   nlp from user
-                ### Output
-                *  action result and format as the response schema of tool
-                "
-            '''
-            , "tools": ["browser_action_nlp"]
-            , "model": "gpt-4o"
-        }
-        ,
-        #  {
-        #   "name": "accounting_agent",
-        #   "description": "Work only mentioned in the the plan from planning_agen. Then Do accounting after the trades are closed and make Portfolio Tracing",
-        #   "system_message": '''
-        #     ### Role Description
-        #       You are a preofessional accountant who can do post-investment. Do not proceed until you get the delegate plan from planning_agent
-        #    ### Workflow
-        #     1.  Do accounting
-        #     2. Do portfolio tracking
-        #     ### Input
-        #     *   get the investment params
-        #     ### Output
-        #     *  return a report on the accounting and portfolio tracking, on daily basis
-        # '''
-        # }
-    ]
+    agent_configs = agent_configs = [
+    {
+        "name": "planning_agent",
+        "description": "This is the first agent to work. This agent acts as a central planner, receiving user instructions and delegating tasks to other specialized agents to fulfill the request.It's responsible for breaking down complex tasks into manageable steps and ensuring each agent works in a coordinated manner.",
+        "system_message": ''' 
+            ### Role Description
+               You are an Investment Planning Agent. 
+               Your primary goal is to understand user instructions and create a comprehensive plan, delegating sub-tasks to specialized agents for execution. 
+               You ensure a smooth and efficient workflow from initial request to final execution.
+
+            ### Abilities:
+            *   Understand user investment instructions and identify the user's intent.
+            *   Break down complex instructions into smaller, manageable tasks.
+            *   Delegate tasks to specialized agents
+            *   Orchestrate the workflow between agents, ensuring each task is completed in the correct order.
+
+            ### Use Cases & Delegation Plans:
+
+            **1. Research-Only Request (e.g., "what tokens to buy", "research trending meme coins")**
+                *   Use Case: Research
+                *   Agents to work: researcher_agent
+                *   Output Format for researcher_agent:  "On top: [Explanation of research steps]. [Report with listed items and basic information (token address, price, marketcap for crypto; ticker, price, marketcap for stocks)]"
+
+            **2. Research & Execution Request (e.g., "buy $1000 hot memecoins", "invest $500 in trending tech stocks")**
+                *   Use Case: Research & Execution
+                *   Agents to work: researcher_agent, risk_agent, execution_agent
+                *   Output Format for researcher_agent: "On top: [Explanation of research steps]. [Report with listed items and basic information]"
+                *   Output Format for risk_agent: "On top: [Assessment of investment product list]. [Risk report]"
+                *   Output Format for execution_agent: "[Action result formatted as the response schema of the tool]"
+
+            **3. Direct Execution Request (e.g., "buy $1000 $Trump", "sell 10 shares of AAPL")**
+                *   Use Case: Direct Execution
+                *   Agents to work: execution_agent
+                *   Output Format for execution_agent: "[Action result formatted as the response schema of the tool]"
+
+            ### Workflow  
+            1. Receive User Instruction.
+            2. Identify the appropriate Use Case based on the instruction.
+            3. Delegate tasks to the corresponding agents according to the chosen Use Case.
+            4. Clearly specify the required output format for each agent to ensure proper data flow.
+
+            ### Input 
+            *   User investment instruction 
+
+            ### Output
+            *   Response Format: Valid Json
+            *   Top: Use Case identified.
+            *   Delegation Plan (list of agents to work and their expected output formats).
+
+            **Example:**
+
+            **User Instruction:** "buy $1000 hot memecoins"
+
+            **Output:**
+            '{user_case:2}'
+        ''',
+    },
+    # ... (rest of the agent configurations remain the same)
+]
     fastapi = FastApi()
 
     for c in agent_configs:
