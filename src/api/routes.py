@@ -281,7 +281,7 @@ async def check_trade_action(request: CheckTradeActionRequest):
         }
     """
     try:
-        llm = ChatOpenAI(model_name="gpt-4o-mini")
+        llm = ChatOpenAI(model_name="gpt-4o")
         plan_message = """
             You are a precise browser automation agent that interacts with websites through structured commands. Your role is to:
         1. Analyze the provided NLP action
@@ -311,7 +311,7 @@ async def check_trade_action(request: CheckTradeActionRequest):
 @router.post("/check_target_page")
 async def check_target_page(request: CheckTargetPageRequest):
     try:
-        llm = ChatOpenAI(model_name="gpt-4o-mini")
+        llm = ChatOpenAI(model_name="gpt-4o")
         plan_message = """
             You are a precise browser automation agent that interacts with websites through structured commands. Your role is to:
         1. Analyze the provided webpage url
@@ -451,34 +451,38 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
 
 
 
-async def check_agent(content: str):
-    try:
-        llm = ChatOpenAI(model_name="gpt-4o-mini")
-        plan_message = """
-        You are a precise browser automation agent that interacts with websites through structured commands. Your role is to:
-        1. Analyze the provided webpage url
-        2. Determine if you are already on the target page https://gmgn.ai
-        3. Respond with valid JSON containing the result of determine
-
-        INPUT STRUCTURE:
-        Content: the content provided by the user
-
-        RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format: 
-        {"use_agent": true}
-            """
-        system_message = SystemMessage(content=plan_message)
-        human_message = HumanMessage(content=f"""
-            Content: {content}
-            """)
-
-        msg = [system_message, human_message]
-
-        structured_llm = llm.with_structured_output(schema=CheckAgent, include_raw=True, method="function_calling")
-        result = await structured_llm.ainvoke(msg)
-        print(result)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# async def check_execution_agent(content: str):
+#     try:
+#         llm = ChatOpenAI(model_name="gpt-4o")
+#         plan_message = """
+#         You are an accurate route decision maker who can determine whether to use an agent based on the user's description and the corresponding question. Your role is to:
+#         1. Analyze the provided context of user
+#         2. Match the corresponding question, return the result, if not matched return use agent is false
+#         3. Respond with valid JSON containing the result of determine
+#
+#         QUESTION LIST:
+#         1. What token I buy? -> use_agent: false
+#         2. I buy 0.01 trump -> use_agent:
+#
+#         INPUT STRUCTURE:
+#         Content: the content provided by the user
+#
+#         RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format:
+#         {"use_agent": true}
+#             """
+#         system_message = SystemMessage(content=plan_message)
+#         human_message = HumanMessage(content=f"""
+#             Content: {content}
+#             """)
+#
+#         msg = [system_message, human_message]
+#
+#         structured_llm = llm.with_structured_output(schema=CheckAgent, include_raw=True, method="function_calling")
+#         result = await structured_llm.ainvoke(msg)
+#         print(result)
+#         return result
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post( "/chat")
 async def chat(request: ChatMessage):
@@ -520,7 +524,13 @@ async def chat(request: ChatMessage):
         content = f'user nlp: {request.content}, dataframe: {dataframe_str}'
         
         print("gpt_user_id", gpt_user_id)
-        response = await fastapi.get_chat_response(gpt_user_id, content, gpt_id)
+        check_trade_action_content = CheckTradeActionRequest(nlp=request.content)
+        check_result = await check_trade_action(check_trade_action_content)
+        print("check_result", check_result)
+        agent_ids = []
+        if check_result["parsed"].is_trade_action:
+            agent_ids = ['67ae23d0d0b370cc4c94aa53']
+        response = await fastapi.get_chat_response(gpt_user_id, content, gpt_id, agent_ids=agent_ids)
         response_content = pydash.get(response.data, 'content')
         return response_content
 
@@ -544,5 +554,11 @@ async def chat(request: ChatMessage):
             status_code=500,
             detail=f"Failed to process chat message: {str(e)}"
         )
+
+
+
+if __name__ == '__main__':
+    res = asyncio.run(check_agent("when should buy BTC?"))
+    print(res['parsed'].use_agent)
 
 

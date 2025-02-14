@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import aiohttp
 import json
 import logging
@@ -111,7 +111,7 @@ class FastApi:
                 error=f"Request failed: {str(e)}"
             )
 
-    async def get_chat_response(self, user_id: str, content: str, gpt_id: str, use_agent: bool = False) -> ApiResponse:
+    async def get_chat_response(self, user_id: str, content: str, gpt_id: str, agent_ids: Optional[List[str]] = []) -> ApiResponse:
         """
         Get chat response from API
         
@@ -128,8 +128,11 @@ class FastApi:
             }],
             "user_id": user_id,
             "gpt_id": gpt_id,
-            "use_agent": use_agent
+            "use_agent": True
         }
+        if len(agent_ids)>0:
+            data.update({"team": {"agent_ids": agent_ids}})
+
         return await self._request("POST", "/v2/chat", data=data)
 
     async def create_gpt_user(self):
