@@ -83,8 +83,9 @@ class FastApi:
                 params=params,
                 timeout=request_timeout
             ) as response:
+                content = await response.read()
+                print("content",content)
                 response_data = await response.json()
-                print(response_data)
                 print("response_data", response_data)
                 
                 if response.status >= 400:
