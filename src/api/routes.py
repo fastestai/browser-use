@@ -162,6 +162,9 @@ class Steps(BaseModel):
 class IsTargetPage(BaseModel):
     result: bool
 
+class CheckAgent(BaseModel):
+    use_agent: bool
+
 class CheckTradeActionRequest(BaseModel):
     """
     检查交易动作的请求结构
@@ -448,6 +451,34 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
 
 
 
+async def check_agent(content: str):
+    try:
+        llm = ChatOpenAI(model_name="gpt-4o-mini")
+        plan_message = """
+        You are a precise browser automation agent that interacts with websites through structured commands. Your role is to:
+        1. Analyze the provided webpage url
+        2. Determine if you are already on the target page https://gmgn.ai
+        3. Respond with valid JSON containing the result of determine
+
+        INPUT STRUCTURE:
+        Content: the content provided by the user
+
+        RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format: 
+        {"use_agent": true}
+            """
+        system_message = SystemMessage(content=plan_message)
+        human_message = HumanMessage(content=f"""
+            Content: {content}
+            """)
+
+        msg = [system_message, human_message]
+
+        structured_llm = llm.with_structured_output(schema=CheckAgent, include_raw=True, method="function_calling")
+        result = await structured_llm.ainvoke(msg)
+        print(result)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post( "/chat")
 async def chat(request: ChatMessage):

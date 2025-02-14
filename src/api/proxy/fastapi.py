@@ -111,7 +111,7 @@ class FastApi:
                 error=f"Request failed: {str(e)}"
             )
 
-    async def get_chat_response(self, user_id: str, content: str, gpt_id: str) -> ApiResponse:
+    async def get_chat_response(self, user_id: str, content: str, gpt_id: str, use_agent: bool) -> ApiResponse:
         """
         Get chat response from API
         
@@ -128,7 +128,7 @@ class FastApi:
             }],
             "user_id": user_id,
             "gpt_id": gpt_id,
-            "use_agent": True
+            "use_agent": use_agent
         }
         return await self._request("POST", "/v2/chat", data=data)
 
@@ -300,15 +300,15 @@ async def main():
     # print("gpt_id", gpt_id)
     # gpt_user_id = await fastapi.create_gpt_user()
     gpt_id = '67ae1a87d0b370cc4c94a9e4'
-    gpt_user_id = '67ad8bc79d6468c15537fb81'
-    register_result = await fastapi.gpt_register_tool(gpt_id)
-    print("register_result", register_result)
-    for c in agent_configs:
-        result = await fastapi.create_agent(agent_conf =c, gpt_id=gpt_id)
-        print(result)
-    # content = 'I buy 0.01 trump'
-    # chat_result = await fastapi.get_chat_response(user_id=gpt_user_id,content=content,gpt_id=gpt_id)
-    # print(chat_result)
+    gpt_user_id = '67ac39d50cef4ea4cf0df45b'
+    # register_result = await fastapi.gpt_register_tool(gpt_id)
+    # print("register_result", register_result)
+    # for c in agent_configs:
+    #     result = await fastapi.create_agent(agent_conf =c, gpt_id=gpt_id)
+    #     print(result)
+    content = 'I buy 0.01 trump'
+    chat_result = await fastapi.get_chat_response(user_id=gpt_user_id,content=content,gpt_id=gpt_id)
+    print(chat_result)
     # for c in agent_configs:
     #     result = await fastapi.create_agent(agent_conf=c, gpt_id=gpt_id)
     #     print(result)
