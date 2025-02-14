@@ -351,7 +351,7 @@ async def register_agent(request: AgentRegisterRequest):
     user_id = '67ac39d50cef4ea4cf0df45b'
     monitor_agent = BrowserPluginMonitorAgent(browser_plugin_id=agent_id, gpt_user_id=user_id)
     monitor_service.register_agent(agent_id, monitor_agent)
-    return
+    return {"user_id": user_id}
 
 
 @router.get("/agent/{agent_id}/monitor")
@@ -484,69 +484,48 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post( "/chat")
+@router.post("/chat")
 async def chat(request: ChatMessage):
-    """
-    处理用户聊天消息
-
-    本接口用于接收用户的聊天消息，并返回相应的响应。支持普通文本对话和命令处理。
-
-    参数:
-        request: ChatMessage
-            - co_instance_id: 插件唯一标识，用于跟踪对话上下文
-            - content: 聊天内容
-            - dataframe: 网页数据
-    示例:
-        请求:
-            POST /api/v1/chat
-            {
-                "co_instance_id": "co_123",
-                "content": "what is the price of BTC",
-                "dataframe": {}
-            }
-    """
-
-
     try:
-        gpt_id = '67af2136f2a584eaa3ecfb6c'
+        # 设置超时时间为5分钟
+        timeout = 300  # 秒
+        async with asyncio.timeout(timeout):  # 使用 asyncio.timeout 上下文管理器
+            gpt_id = '67af1045db80df16e4b1880f'
 
-        co_instance_id = request.co_instance_id
-        if co_instance_id not in monitor_service.get_agents():
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to process chat message: agent not found"
+            co_instance_id = request.co_instance_id
+            if co_instance_id not in monitor_service.get_agents():
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to process chat message: agent not found"
+                )
+            browser_plugin_instance = monitor_service.get_agent(co_instance_id)
+            gpt_user_id = browser_plugin_instance.get_gpt_user_id()
+            
+            # 将 dataframe 转换为格式化的字符串
+            dataframe_str = json.dumps(request.dataframe, ensure_ascii=False, indent=2)
+            content = f'user nlp: {request.content}, dataframe: {dataframe_str}'
+            
+            print("gpt_user_id", gpt_user_id)
+            check_trade_action_content = CheckTradeActionRequest(nlp=request.content)
+            check_result = await check_trade_action(check_trade_action_content)
+            print("check_result", check_result)
+            agent_ids = []
+            # 在调用 get_chat_response 时传入超时参数
+            response = await fastapi.get_chat_response(
+                gpt_user_id, 
+                content, 
+                gpt_id, 
+                agent_ids=agent_ids
             )
-        browser_plugin_instance = monitor_service.get_agent(co_instance_id)
-        gpt_user_id = browser_plugin_instance.get_gpt_user_id()
-        
-        # 将 dataframe 转换为格式化的字符串
-        dataframe_str = json.dumps(request.dataframe, ensure_ascii=False, indent=2)
-        content = f'user nlp: {request.content}, dataframe: {dataframe_str}'
-        
-        print("gpt_user_id", gpt_user_id)
-        check_trade_action_content = CheckTradeActionRequest(nlp=request.content)
-        check_result = await check_trade_action(check_trade_action_content)
-        print("check_result", check_result)
-        agent_ids = []
-        response = await fastapi.get_chat_response(gpt_user_id, content, gpt_id, agent_ids=agent_ids)
-        response_content = pydash.get(response.data, 'content')
-        if check_result["parsed"].is_trade_action and browser_plugin_instance.get_status_queue_size() < 1:
-            await browser_plugin_instance.status_queue.put(request.content)
-        return response_content
-
-        # 根据消息类型处理
-       
-
-        # return ChatResponse(
-        #     content=response_content,
-        #     timestamp=datetime.datetime.now(),
-        #     status="success"
-        # )
+            response_content = pydash.get(response.data, 'content')
+            if check_result["parsed"].is_trade_action and browser_plugin_instance.get_status_queue_size() < 1:
+                await browser_plugin_instance.status_queue.put(request.content)
+            return response_content
 
     except asyncio.TimeoutError:
         raise HTTPException(
-            status_code=500,
-            detail="Request timed out after 300 seconds"
+            status_code=504,  # 使用 504 Gateway Timeout
+            detail=f"Request timed out after {timeout} seconds"
         )
     except Exception as e:
         print(e)
