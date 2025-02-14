@@ -527,11 +527,11 @@ async def chat(request: ChatMessage):
         check_trade_action_content = CheckTradeActionRequest(nlp=request.content)
         check_result = await check_trade_action(check_trade_action_content)
         print("check_result", check_result)
-        agent_ids = []
-        if check_result["parsed"].is_trade_action:
-            agent_ids = ['67aef105b0db180bab9ccc57']
+        # agent_ids = []
         response = await fastapi.get_chat_response(gpt_user_id, content, gpt_id, agent_ids=agent_ids)
         response_content = pydash.get(response.data, 'content')
+        if check_result["parsed"].is_trade_action and browser_plugin_instance.get_status_queue_size() < 1:
+            await browser_plugin_instance.status_queue.put(request.content)
         return response_content
 
         # 根据消息类型处理

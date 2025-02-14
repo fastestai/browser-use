@@ -7,6 +7,9 @@ class BaseMonitorAgent:
     def __init__(self):
         self.status_queue = asyncio.Queue()
 
+    def get_status_queue_size(self):
+        return self.status_queue.qsize()
+
 
 class BrowserPluginMonitorAgent(BaseMonitorAgent):
     """Browser plugin monitoring agent implementation"""
