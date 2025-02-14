@@ -111,7 +111,7 @@ class FastApi:
                 error=f"Request failed: {str(e)}"
             )
 
-    async def get_chat_response(self, user_id: str, content: str, gpt_id: str, use_agent: bool) -> ApiResponse:
+    async def get_chat_response(self, user_id: str, content: str, gpt_id: str, use_agent: bool = False) -> ApiResponse:
         """
         Get chat response from API
         
