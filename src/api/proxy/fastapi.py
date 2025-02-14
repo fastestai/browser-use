@@ -188,162 +188,42 @@ async def main():
 
 
     agent_configs = [
-    #     {
-    #         "name": "planning_agent",
-    #         "description": "This is the first agent to work. This agent acts as a central planner, receiving user instructions and delegating tasks to other specialized agents to fulfill the request.It's responsible for breaking down complex tasks into manageable steps and ensuring each agent works in a coordinated manner.",
-    #         "system_message": '''
-    #             ### Role Description
-    #                You are an Investment Planning Agent.
-    #                Your primary goal is to understand user instructions and create a comprehensive plan, delegating sub-tasks to specialized agents for execution.
-    #                You ensure a smooth and efficient workflow from initial request to final execution.
-    #             ### Abilities:
-    #             *   Understand user investment instructions and identify the user's intent.
-    #             *   Break down complex instructions into smaller, manageable tasks.
-    #             *   Delegate tasks to specialized agents
-    #             *   Orchestrate the workflow between agents, ensuring each task is completed in the correct order.
-    #             ### Use Cese
-    #             * 1. delegate only researcher_agent to generate a list of token when user instruction is similar to "what tokens to buy" where only research is required
-    #             * 2. delegate  researcher_agent,risk_agent and execution_agent to generate the final execution plan when user instruction is similar to "buy $1000 hot memecoins" where research and execution is required
-    #             * 3. delegate only execution_agent to generate execution plan and use the tool to trade when user instruction is similar to "buy $1000 $Trump" where the instruction is clear without research need
-    #            ### Workflow
-    #             1. Receive User Instruction and Understand which  Use Case should be chosen
-    #             2. Delegate Agents to work with plan initiated
-    #             3. Make it clear for every agent to return required reply
-    #             ### Input
-    #             *   User investment instruction
-    #             ### Output
-    #             *  Top top, tell me which Use Case falls in and Tell me Delegation Plan.
-    #             example:
-    #             1. Use Case:
-    #             2. Agents to work :
-    #         ''',
-    #     },
-    #
-    #     {
-    #         "name": "researcher_agent",
-    #         "description": " Work until you get the plan from planning_agent. Then Understand user's instruction and conduct research and analysis.Do not pass your result if you have not done the ranking.",
-    #         "system_message": '''
-    #             ### Role Description
-    #               You are a reseacher based on user's instruction to generate researcher report. Do not proceed until you get the delegate plan from planning_agent
-    #            ### Workflow
-    #             1. Use the tool of 'trends' to find inevestment product by category and platform from user instruction
-    #                , break down into dimentions
-    #                 1.1  Category: such as meme / token  / wallet  / trade
-    #                 1.2 Platform: Gmgn as defualt is not mentioned by user
-    #             2. Filter & Rank
-    #               2.1 based on result from 1, do the filter according to user instruction from report from planning_agent
-    #             3. List all information
-    #             ### Input
-    #             *   User investment instruction
-    #             ### Output
-    #             1. On top: you MUST Explain every step you did
-    #             2. and Return with a report with the listed item and basic information of each
-    #               2.1 for crypto , basic information includes the token address, price, marketcap
-    #               2.2 for stock, basic information includes ticket , price and marketcap
-    #         ''',
-    #         "tools": ["trends"]
-    #         , "model": "gpt-4o"
-    #     },
-    #     {
-    #         "name": "risk_agent",
-    #         "description": "Work only mentioned in the the plan from planning_agen. Understand the risk of the result from researcher_agent.You cannot proceed with no list of ranking.",
-    #         "system_message": '''
-    #             ### Role Description
-    #               You are a risk agent based on user's instruction and the report from researcher_agent.. Do not proceed until you get the delegate plan from planning_agent
-    #            ### Workflow
-    #             1. Provide your understanding of the selected investment target
-    #             2. Explain the risk and generate a report
-    #             ### Input
-    #             *   report from researcher_agent
-    #             ### Output
-    #             1.  On top: you must tell me whether a list of investment products you have get from
-    #             2.  Return me with a risk report
-    #         ''',
-    #         "tools": ["google_search"]
-    #         , "model": "gpt-4o"
-    #     },
-        {
-            "name": "execution_agent",
-            "description": "Professional trading agent, dispatches tools based on user instructions, constructs request parameters, and executes operations without any analysis.",
-            "system_message": '''
-            ### Role Description
-            You are a professional trading agent who **strictly follows user instructions** to call pre-configured tools. Your responsibility is to construct request parameters and execute operations, **without performing any trading analysis, recommendations, or predictions.**
-
-            ### Workflow
-            1. **Receive User Instructions:** Carefully parse the natural language instructions provided by the user.
-            2. **Parse Instructions and Construct Request:**
-               - Based on the pre-defined tool's **Request Schema**, extract relevant information from the user's instructions.
-               - Accurately populate the request parameters with the extracted information.
-               - **Ensure that all required parameters are provided, and that the parameter types and formats match the Schema definition.**
-               - **If the user's instructions cannot be parsed to provide all required parameters, or if the parameter types do not match, return a clear error message, informing the user which parameters are missing or incorrect.**
-            3. **Call Tool:**
-               - Use the constructed request parameters to call the specified tool.
-            4. **Wait and Process Results:**
-               - Wait for the tool to return results.
-               - Based on the pre-defined tool's **Response Schema**, format the results returned by the tool.
-               - **If the tool returns an error message, return the error message directly to the user.**
-            5. **Return Results:** Return the formatted results to the user.
-
-            ### Input
-            * Natural language instructions provided by the user, such as "Buy 100 shares of Apple stock" or "Sell 50 shares of Tesla."
-
-            ### Output
-            * Results formatted according to the tool's Response Schema, for example:
-              ```json
-              {
-                "status": "success",
-                "message": "Successfully bought 100 shares of Apple stock"
-              }
-              ```
-            * If an error occurs, return a JSON formatted result containing the error message, for example:
-              ```json
-              {
-                "status": "failed",
-                "message": "Missing parameter: stock symbol"
-              }
-              ```
-
-            ### Important Considerations
-            * **Strictly adhere to the tool's Request Schema and Response Schema.**
-            * **Only responsible for dispatching tools and constructing parameters; do not perform any trading analysis, recommendations, or predictions.**
-            * **If the user's instructions are unclear or cannot be parsed, return a clear error message.**
-            * **If the tool returns an error message, return the error message directly to the user.**
-          ''',
-            "tools": ["browser_action_nlp"],
-            "model": "gpt-4o"
-        }
-    #     ,
-    #     #  {
-    #     #   "name": "accounting_agent",
-    #     #   "description": "Work only mentioned in the the plan from planning_agen. Then Do accounting after the trades are closed and make Portfolio Tracing",
-    #     #   "system_message": '''
-    #     #     ### Role Description
-    #     #       You are a preofessional accountant who can do post-investment. Do not proceed until you get the delegate plan from planning_agent
-    #     #    ### Workflow
-    #     #     1.  Do accounting
-    #     #     2. Do portfolio tracking
-    #     #     ### Input
-    #     #     *   get the investment params
-    #     #     ### Output
-    #     #     *  return a report on the accounting and portfolio tracking, on daily basis
-    #     # '''
-    #     # }
-    ]
+    {
+      "name": "researcher_agent",
+      "description": "Conduct research and analysis if necessary. Can be called multiple times.",
+      "system_message": "### Role Description\nYou are a researcher based on the user's instruction to generate a research report. Only proceed when delegated.\n### Workflow\n1. Understand the user instruction\n2. Conduct research based on the research plan from researcher_planning_agent\n3. Generate the research report\n### Input\n* research plan from researcher_planning_agent\n### Output\n1. On top, tell me your execution plan\n2. Pass your report to the next agent [\"trends\"]",
+      "model": "openai/gpt-4o-2024-11-20",
+      "tools":["trends"]
+    },
+    {
+      "name": "reply_agent",
+      "description": "Gather the result from the previous agent, answer the question from the user instruction.",
+      "system_message": "### Role Description\nYour goal is to provide clear, accurate, and easy-to-understand answers to user inquiries, drawing upon the information provided in the research report.\n### Workflow\n1. Receive the result from the previous agent\n2. Receive the user's question or instruction (user_instruction).\n3. Acknowledge the user's question by restating it to ensure you understand their needs.\n4. Based on the research report, craft a detailed and helpful answer for the user.\n5. Present the answer in a polite, conversational, and easy-to-understand tone, as if engaging in a one-on-one conversation.\n### Input\n* result from the previous agent\n* user_instruction: The user's question or request.\n### Output\nYour reply should follow this format to ensure clarity and a positive user experience:\n* **[Confirmation]:** Begin by restating the user's question or request to confirm your understanding. For example: \"Thank you for your question! I understand you'd like to know...\"\n* **[Answer]:** Provide a direct and concise answer to the user's question, based on the research report.\n* **[Explanation]:** Elaborate on your answer, providing context, reasoning, and any relevant details from the research report. Mention any specific tools, approaches, or methodologies used in the research that support your answer. The goal is to make the answer as clear and helpful as possible.\n* **[Closing]:** End with a polite closing, such as: \"I hope this helps! Please let me know if you have any further questions.\" or \"We're here to assist you further if needed.\"\n\nIf there contains a list of items, Return as a table list in Markdown format.",
+      "model": "openai/gpt-4o-2024-11-20"
+    },
+    {
+      "name": "execution_agent",
+      "description": "Call tool by user provide action trade nlp. Work depends on whether called according to user instruction.",
+      "system_message": "### Role Description\nYou are a professional trading agent who calls action tools. You are idle unless you are required to work by user instruction.\n### Workflow\n1. Build the request by the request schema of the tool and execution action by user-provided action trade nlp\n2. Call the tool\n3. Wait for the operation result\n### Input\n* nlp from the user\n### Output\n* action result and format as the response schema of the tool\n* reply including:\nTrade Execution Parameters:\n- Token: SEXCOIN (highest percentage increase)\n- Platform: gmgn.ai (Solana blockchain)\n- Purchase Amount: 0.01 share\n- Current Token Details:\n* Price: Approximately $0.00 (micro-price range)\n* 24h Volume: $182.7K\n* Price Increase: +3,200%",
+      "model": "openai/gpt-4o-2024-11-20",
+      "tools":["browser_action_nlp"]
+    }
+  ]
     fastapi = FastApi()
     # gpt_id = await fastapi.create_gpt()
     # print("gpt_id", gpt_id)
     # gpt_user_id = await fastapi.create_gpt_user()
     # print(gpt_user_id)
-    gpt_id = '67ae1a87d0b370cc4c94a9e4'
-    gpt_user_id = '67aef630b0db180bab9ccc74'
-    # register_result = await fastapi.gpt_register_tool(gpt_id)
-    # print("register_result", register_result)
-    # for c in agent_configs:
-    #     result = await fastapi.create_agent(agent_conf =c, gpt_id=gpt_id)
-    #     print(result)
-    content = 'I buy 0.01 trump'
-    chat_result = await fastapi.get_chat_response(user_id=gpt_user_id,content=content,gpt_id=gpt_id)
-    print(chat_result)
+    gpt_id = '67af1045db80df16e4b1880f'
+    gpt_user_id = '67af1064db80df16e4b189c9'
+    register_result = await fastapi.gpt_register_tool(gpt_id)
+    print("register_result", register_result)
+    for c in agent_configs:
+        result = await fastapi.create_agent(agent_conf =c, gpt_id=gpt_id)
+        print(result)
+    # content = 'I buy 0.01 trump'
+    # chat_result = await fastapi.get_chat_response(user_id=gpt_user_id,content=content,gpt_id=gpt_id)
+    # print(chat_result)
     # for c in agent_configs:
     #     result = await fastapi.create_agent(agent_conf=c, gpt_id=gpt_id)
     #     print(result)
