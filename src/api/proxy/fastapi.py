@@ -29,7 +29,7 @@ class FastApi:
         self.api_key = api_key
         self.session: Optional[aiohttp.ClientSession] = None
         # 设置默认超时时间（秒）
-        self.timeout = aiohttp.ClientTimeout(total=3600)
+        self.timeout = aiohttp.ClientTimeout(total=36000)
 
     async def _ensure_session(self):
         """Ensure aiohttp session exists"""
@@ -121,20 +121,27 @@ class FastApi:
             content: Message content
             gpt_id: GPT model identifier
         """
-        data = {
-            "messages": [{
-                "content": content,
-                "role": "user",
-                "timestamp": int(datetime.now().timestamp())
-            }],
-            "user_id": user_id,
-            "gpt_id": gpt_id,
-            "use_agent": True
-        }
+        # data = {
+        #     "messages": [{
+        #         "content": content,
+        #         "role": "user",
+        #         "timestamp": int(datetime.now().timestamp())
+        #     }],
+        #     "user_id": user_id,
+        #     "gpt_id": gpt_id,
+        #     "use_agent": True
+        # }
+        data = {'messages': [{
+                                 'content': 'user nlp: What tokens can I buy?, dataframe: [\n  {\n    "key": 0,\n    "token": "Broccoli",\n    "age": "17h",\n    "liq-mc": "8.5M $216.5M",\n    "holders": "33.7K",\n    "smart-kol": "- -",\n    "1h-txs": "11,222 6,052 / 5,170",\n    "1h-vol": "$21.4M",\n    "price": "$0.2165",\n    "1m": "+10.5%",\n    "5m": "-1.9%",\n    "1h": "+21.3%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced Yes Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "-- Sell All",\n    "": "Buy"\n  },\n  {\n    "key": 1,\n    "token": "zhaoling",\n    "age": "2h",\n    "liq-mc": "31.9K $60.9K",\n    "holders": "698",\n    "smart-kol": "- -",\n    "1h-txs": "2,968 1,779 / 1,189",\n    "1h-vol": "$390.8K",\n    "price": "$0.0₄6092",\n    "1m": "+18%",\n    "5m": "-18.2%",\n    "1h": "+74.3%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced Yes Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "-- Sell All",\n    "": "Buy"\n  },\n  {\n    "key": 2,\n    "token": "MindAi",\n    "age": "3h",\n    "liq-mc": "47K $71.9K",\n    "holders": "1.3K",\n    "smart-kol": "- -",\n    "1h-txs": "1,667 823 / 844",\n    "1h-vol": "$229.9K",\n    "price": "$0.0₄7193",\n    "1m": "+2.3%",\n    "5m": "-21.5%",\n    "1h": "-75.2%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced Yes Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "-- Sell",\n    "": "Buy"\n  },\n  {\n    "key": 3,\n    "token": "BROCCOLI",\n    "age": "16h",\n    "liq-mc": "635.2K $16.6M",\n    "holders": "7K",\n    "smart-kol": "- -",\n    "1h-txs": "844 406 / 438",\n    "1h-vol": "$624.1K",\n    "price": "$0.0166",\n    "1m": "-2.3%",\n    "5m": "-9.4%",\n    "1h": "-11.2%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced Yes Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "--",\n    "": "Buy"\n  },\n  {\n    "key": 4,\n    "token": "CZBroccoli",\n    "age": "9h",\n    "liq-mc": "34.7K $84.2K",\n    "holders": "1.5K",\n    "smart-kol": "- -",\n    "1h-txs": "761 381 / 380",\n    "1h-vol": "$131.3K",\n    "price": "$0.0₄8425",\n    "1m": "0%",\n    "5m": "+2.2%",\n    "1h": "-55.6%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced Yes Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "-- Buy",\n    "": "Buy"\n  },\n  {\n    "key": 5,\n    "token": "Broccoli",\n    "age": "17h",\n    "liq-mc": "707.7K $4.1M",\n    "holders": "5.2K",\n    "smart-kol": "- -",\n    "1h-txs": "658 309 / 349",\n    "1h-vol": "$414.4K",\n    "price": "$0.0041",\n    "1m": "+2.8%",\n    "5m": "-1.8%",\n    "1h": "-16.1%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced Yes Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "-- Sell All",\n    "": "Buy"\n  },\n  {\n    "key": 6,\n    "token": "zh zhaoheng",\n    "age": "49m",\n    "liq-mc": "6K $12.4K",\n    "holders": "149",\n    "smart-kol": "- -",\n    "1h-txs": "615 389 / 226",\n    "1h-vol": "$96.9K",\n    "price": "$0.0₄1248",\n    "1m": "-14.1%",\n    "5m": "-14.1%",\n    "1h": "+136.8%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced Yes Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "-- HODL",\n    "": "Buy"\n  },\n  {\n    "key": 7,\n    "token": "VINU",\n    "age": "84d",\n    "liq-mc": "420.6K $26.6M",\n    "holders": "18.7K",\n    "smart-kol": "- -",\n    "1h-txs": "597 277 / 320",\n    "1h-vol": "$37.5K",\n    "price": "$0.0₇2962",\n    "1m": "+0%",\n    "5m": "+0%",\n    "1h": "-3.4%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced No Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "--",\n    "": "Buy"\n  },\n  {\n    "key": 8,\n    "token": "CaptainBNB",\n    "age": "3d",\n    "liq-mc": "1.6M $23.3M",\n    "holders": "11.4K",\n    "smart-kol": "- -",\n    "1h-txs": "531 257 / 274",\n    "1h-vol": "$332.1K",\n    "price": "$0.0233",\n    "1m": "+0.3%",\n    "5m": "+0.3%",\n    "1h": "+10.4%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced Yes Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "-- Sell All",\n    "": "Buy"\n  },\n  {\n    "key": 9,\n    "token": "KAKA",\n    "age": "6h",\n    "liq-mc": "136.6K $960K",\n    "holders": "1.1K",\n    "smart-kol": "- -",\n    "1h-txs": "457 288 / 169",\n    "1h-vol": "$180.7K",\n    "price": "$0.0009",\n    "1m": "0%",\n    "5m": "-4.1%",\n    "1h": "-40.9%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced Yes Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "-- Sell All",\n    "": "Buy"\n  },\n  {\n    "key": 10,\n    "token": "TST",\n    "age": "17d",\n    "liq-mc": "3.9M $119.3M",\n    "holders": "25.4K",\n    "smart-kol": "- -",\n    "1h-txs": "426 219 / 207",\n    "1h-vol": "$336.3K",\n    "price": "$0.1193",\n    "1m": "-0.6%",\n    "5m": "-0.6%",\n    "1h": "+4.2%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced Yes Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "-- HODL",\n    "": "Buy"\n  },\n  {\n    "key": 11,\n    "token": "CAT",\n    "age": "84d",\n    "liq-mc": "12.5M $121.7M",\n    "holders": "28K",\n    "smart-kol": "- -",\n    "1h-txs": "410 199 / 211",\n    "1h-vol": "$565.5K",\n    "price": "$0.0₄1352",\n    "1m": "+1.7%",\n    "5m": "+1.7%",\n    "1h": "+4.8%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced No Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "--",\n    "": "Buy"\n  },\n  {\n    "key": 12,\n    "token": "BROWNIE",\n    "age": "1d",\n    "liq-mc": "607.9K $1M",\n    "holders": "6.6K",\n    "smart-kol": "- -",\n    "1h-txs": "403 187 / 216",\n    "1h-vol": "$92.1K",\n    "price": "$0.001",\n    "1m": "0%",\n    "5m": "0%",\n    "1h": "-3.9%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced Yes Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "-- Sell All",\n    "": "Buy"\n  },\n  {\n    "key": 13,\n    "token": "Cheems",\n    "age": "84d",\n    "liq-mc": "7.1M $225.5M",\n    "holders": "42.5K",\n    "smart-kol": "1 / -",\n    "1h-txs": "398 205 / 193",\n    "1h-vol": "$282.9K",\n    "price": "$0.0₅1026",\n    "1m": "-0.8%",\n    "5m": "-0.8%",\n    "1h": "+1.7%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced Yes Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "--",\n    "": "Buy"\n  },\n  {\n    "key": 14,\n    "token": "Auction",\n    "age": "83d",\n    "liq-mc": "17.3K $4.7M",\n    "holders": "191",\n    "smart-kol": "- -",\n    "1h-txs": "394 196 / 198",\n    "1h-vol": "$256K",\n    "price": "$11.2018",\n    "1m": "+0.5%",\n    "5m": "+0.7%",\n    "1h": "+0.2%",\n    "degen-audit": "No Honeypot Yes Verified Yes Renounced No Locked 0% Insiders",\n    "taxes-b-s": "0% / 0%",\n    "dev": "--",\n    "": "Buy"\n  }\n]',
+                                 'role': 'user', 'timestamp': 1739527486}], 'user_id': '67ac39d50cef4ea4cf0df45b',
+                'gpt_id': '67af1045db80df16e4b1880f', 'use_agent': True}
         if len(agent_ids)>0:
             data.update({"team": {"agent_ids": agent_ids}})
 
-        return await self._request("POST", "/v2/chat", data=data)
+        now = datetime.now()
+        result = await self._request("POST", "/v2/chat", data=data)
+        print('time comuse ===>', datetime.now() - now)
+        return result
 
     async def create_gpt_user(self):
         """Create a new GPT user"""
@@ -188,40 +195,35 @@ async def main():
     # gpt_id = "67acc197140b250260ff8b68"
 
 
-    agent_configs = [
-    {
-      "name": "researcher_agent",
-      "description": "Conduct research and analysis if necessary. Can be called multiple times.",
-      "system_message": "### Role Description\nYou are a researcher based on the user's instruction to generate a research report. Only proceed when delegated.\n### Workflow\n1. Understand the user instruction\n2. Conduct research based on the research plan from researcher_planning_agent\n3. Generate the research report\n### Input\n* research plan from researcher_planning_agent\n### Output\n1. On top, tell me your execution plan\n2. Pass your report to the next agent [\"trends\"]",
-      "model": "openai/gpt-4o-2024-11-20",
-      "tools":["trends"]
-    },
-    {
-      "name": "reply_agent",
-      "description": "Gather the result from the previous agent, answer the question from the user instruction.",
-      "system_message": "### Role Description\nYour goal is to provide clear, accurate, and easy-to-understand answers to user inquiries, drawing upon the information provided in the research report.\n### Workflow\n1. Receive the result from the previous agent\n2. Receive the user's question or instruction (user_instruction).\n3. Acknowledge the user's question by restating it to ensure you understand their needs.\n4. Based on the research report, craft a detailed and helpful answer for the user.\n5. Present the answer in a polite, conversational, and easy-to-understand tone, as if engaging in a one-on-one conversation.\n### Input\n* result from the previous agent\n* user_instruction: The user's question or request.\n### Output\nYour reply should follow this format to ensure clarity and a positive user experience:\n* **[Confirmation]:** Begin by restating the user's question or request to confirm your understanding. For example: \"Thank you for your question! I understand you'd like to know...\"\n* **[Answer]:** Provide a direct and concise answer to the user's question, based on the research report.\n* **[Explanation]:** Elaborate on your answer, providing context, reasoning, and any relevant details from the research report. Mention any specific tools, approaches, or methodologies used in the research that support your answer. The goal is to make the answer as clear and helpful as possible.\n* **[Closing]:** End with a polite closing, such as: \"I hope this helps! Please let me know if you have any further questions.\" or \"We're here to assist you further if needed.\"\n\nIf there contains a list of items, Return as a table list in Markdown format.",
-      "model": "openai/gpt-4o-2024-11-20"
-    },
-    {
-      "name": "execution_agent",
-      "description": "Call tool by user provide action trade nlp. Work depends on whether called according to user instruction.",
-      "system_message": "### Role Description\nYou are a professional trading agent who calls action tools. You are idle unless you are required to work by user instruction.\n### Workflow\n1. Build the request by the request schema of the tool and execution action by user-provided action trade nlp\n2. Call the tool\n3. Wait for the operation result\n### Input\n* nlp from the user\n### Output\n* action result and format as the response schema of the tool\n* reply including:\nTrade Execution Parameters:\n- Token: SEXCOIN (highest percentage increase)\n- Platform: gmgn.ai (Solana blockchain)\n- Purchase Amount: 0.01 share\n- Current Token Details:\n* Price: Approximately $0.00 (micro-price range)\n* 24h Volume: $182.7K\n* Price Increase: +3,200%",
-      "model": "openai/gpt-4o-2024-11-20",
-      "tools":["browser_action_nlp"]
-    }
-  ]
+    agent_configs=[
+        {
+            "name": "researcher_agent",
+            "description": "Conduct research and analysis if necessary. Can be called multiple times.",
+            "system_message": "### Role Description\nYou are a researcher based on the user's instruction to generate a research report. Only proceed when delegated.\n### Workflow\n1. Understand the user instruction\n2. Conduct research by listing the data you get\n3. Generate the research report\n### Input\n* user instruction\n### Output\n1. On top, tell me your execution plan\n2. Pass your report to the next agent [\"dataframe_transform\"]",
+            "model": "openai/gpt-4o-2024-11-20",
+            "tools": [ "dataframe_transform"]
+        },
+        {
+            "name": "reply_agent",
+            "description": "Gather the result from the previous agent, answer the question from the user instruction.",
+            "system_message": "### Role Description\nYour goal is to provide clear, accurate, and easy-to-understand answers to user inquiries, drawing upon the information provided in the research report.\n### Workflow\n1. Receive the result from the previous agent\n2. Receive the user's question or instruction (user_instruction).\n3. Acknowledge the user's question by restating it to ensure you understand their needs.\n4. Based on the research report, craft a detailed and helpful answer for the user.\n5. Present the answer in a polite, conversational, and easy-to-understand tone, as if engaging in a one-on-one conversation.\n### Input\n* result from the previous agent\n* user_instruction: The user's question or request.\n### Output\nYour reply should follow this format to ensure clarity and a positive user experience:\n* **[Confirmation]:** Begin by restating the user's question or request to confirm your understanding. For example: \"Thank you for your question! I understand you'd like to know...\"\n* **[Answer]:** Provide a direct and concise answer to the user's question, based on the research report.\n* **[Explanation]:** Elaborate on your answer, providing context, reasoning, and any relevant details from the research report. Mention any specific tools, approaches, or methodologies used in the research that support your answer. The goal is to make the answer as clear and helpful as possible.\n* **[Closing]:** End with a polite closing, such as: \"I hope this helps! Please let me know if you have any further questions.\" or \"We're here to assist you further if needed.\"\n\nIf there contains a list of items, Return as a table list in Markdown format.",
+            "model": "openai/gpt-4o-2024-11-20"
+        }
+    ]
+
     fastapi = FastApi()
     # gpt_id = await fastapi.create_gpt()
     # print("gpt_id", gpt_id)
     # gpt_user_id = await fastapi.create_gpt_user()
     # print(gpt_user_id)
-    gpt_id = '67af1045db80df16e4b1880f'
+    gpt_id = '67af2136f2a584eaa3ecfb6c'
     gpt_user_id = '67af1064db80df16e4b189c9'
     register_result = await fastapi.gpt_register_tool(gpt_id)
     print("register_result", register_result)
     for c in agent_configs:
         result = await fastapi.create_agent(agent_conf =c, gpt_id=gpt_id)
         print(result)
+
     # content = 'I buy 0.01 trump'
     # chat_result = await fastapi.get_chat_response(user_id=gpt_user_id,content=content,gpt_id=gpt_id)
     # print(chat_result)
