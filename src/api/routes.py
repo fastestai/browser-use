@@ -558,7 +558,8 @@ async def chat(request: ChatMessage):
 
 
 if __name__ == '__main__':
-    res = asyncio.run(check_agent("when should buy BTC?"))
-    print(res['parsed'].use_agent)
+    pass
+    # res = asyncio.run(check_agent("when should buy BTC?"))
+    # print(res['parsed'].use_agent)
 
 
