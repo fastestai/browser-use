@@ -130,8 +130,8 @@ class FastApi:
             "gpt_id": gpt_id,
             "use_agent": True
         }
-        # if len(agent_ids)>0:
-        #     data.update({"team": {"agent_ids": agent_ids}})
+        if len(agent_ids)>0:
+            data.update({"team": {"agent_ids": agent_ids}})
 
         return await self._request("POST", "/v2/chat", data=data)
 
