@@ -508,7 +508,7 @@ async def chat(request: ChatMessage):
 
 
     try:
-        gpt_id = '67ae1a87d0b370cc4c94a9e4'
+        gpt_id = '67aef0b3b0db180bab9ccc53'
 
         co_instance_id = request.co_instance_id
         if co_instance_id not in monitor_service.get_agents():
@@ -529,7 +529,7 @@ async def chat(request: ChatMessage):
         print("check_result", check_result)
         agent_ids = []
         if check_result["parsed"].is_trade_action:
-            agent_ids = ['67ae23d0d0b370cc4c94aa53']
+            agent_ids = ['67aef105b0db180bab9ccc57']
         response = await fastapi.get_chat_response(gpt_user_id, content, gpt_id, agent_ids=agent_ids)
         response_content = pydash.get(response.data, 'content')
         return response_content

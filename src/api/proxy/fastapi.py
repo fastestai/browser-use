@@ -264,22 +264,53 @@ async def main():
     #     },
         {
             "name": "execution_agent",
-            "description": " You call tool by user provide action trade nlp",
+            "description": "Professional trading agent, dispatches tools based on user instructions, constructs request parameters, and executes operations without any analysis.",
             "system_message": '''
-                ### Role Description
-                  You are preofessional trading agent who call action tool.. 
-               ### Workflow
-                1. build the request by the request schema of tool and execution action by user provide action trade nlp
-                3. call the tool
-                3. Wait for operation result
-                ### Input
-                *   nlp from user
-                ### Output
-                *  action result and format as the response schema of tool
-                "
-            '''
-            , "tools": ["browser_action_nlp"]
-            , "model": "gpt-4o"
+            ### Role Description
+            You are a professional trading agent who **strictly follows user instructions** to call pre-configured tools. Your responsibility is to construct request parameters and execute operations, **without performing any trading analysis, recommendations, or predictions.**
+
+            ### Workflow
+            1. **Receive User Instructions:** Carefully parse the natural language instructions provided by the user.
+            2. **Parse Instructions and Construct Request:**
+               - Based on the pre-defined tool's **Request Schema**, extract relevant information from the user's instructions.
+               - Accurately populate the request parameters with the extracted information.
+               - **Ensure that all required parameters are provided, and that the parameter types and formats match the Schema definition.**
+               - **If the user's instructions cannot be parsed to provide all required parameters, or if the parameter types do not match, return a clear error message, informing the user which parameters are missing or incorrect.**
+            3. **Call Tool:**
+               - Use the constructed request parameters to call the specified tool.
+            4. **Wait and Process Results:**
+               - Wait for the tool to return results.
+               - Based on the pre-defined tool's **Response Schema**, format the results returned by the tool.
+               - **If the tool returns an error message, return the error message directly to the user.**
+            5. **Return Results:** Return the formatted results to the user.
+
+            ### Input
+            * Natural language instructions provided by the user, such as "Buy 100 shares of Apple stock" or "Sell 50 shares of Tesla."
+
+            ### Output
+            * Results formatted according to the tool's Response Schema, for example:
+              ```json
+              {
+                "status": "success",
+                "message": "Successfully bought 100 shares of Apple stock"
+              }
+              ```
+            * If an error occurs, return a JSON formatted result containing the error message, for example:
+              ```json
+              {
+                "status": "failed",
+                "message": "Missing parameter: stock symbol"
+              }
+              ```
+
+            ### Important Considerations
+            * **Strictly adhere to the tool's Request Schema and Response Schema.**
+            * **Only responsible for dispatching tools and constructing parameters; do not perform any trading analysis, recommendations, or predictions.**
+            * **If the user's instructions are unclear or cannot be parsed, return a clear error message.**
+            * **If the tool returns an error message, return the error message directly to the user.**
+          ''',
+            "tools": ["browser_action_nlp"],
+            "model": "gpt-4o"
         }
     #     ,
     #     #  {
@@ -302,16 +333,17 @@ async def main():
     # gpt_id = await fastapi.create_gpt()
     # print("gpt_id", gpt_id)
     # gpt_user_id = await fastapi.create_gpt_user()
-    gpt_id = '67ae1a87d0b370cc4c94a9e4'
+    # print(gpt_user_id)
+    gpt_id = '67aef0b3b0db180bab9ccc53'
     gpt_user_id = '67ac39d50cef4ea4cf0df45b'
-    # register_result = await fastapi.gpt_register_tool(gpt_id)
-    # print("register_result", register_result)
-    # for c in agent_configs:
-    #     result = await fastapi.create_agent(agent_conf =c, gpt_id=gpt_id)
-    #     print(result)
-    content = 'I buy 0.01 trump'
-    chat_result = await fastapi.get_chat_response(user_id=gpt_user_id,content=content,gpt_id=gpt_id)
-    print(chat_result)
+    register_result = await fastapi.gpt_register_tool(gpt_id)
+    print("register_result", register_result)
+    for c in agent_configs:
+        result = await fastapi.create_agent(agent_conf =c, gpt_id=gpt_id)
+        print(result)
+    # content = 'I buy 0.01 trump'
+    # chat_result = await fastapi.get_chat_response(user_id=gpt_user_id,content=content,gpt_id=gpt_id)
+    # print(chat_result)
     # for c in agent_configs:
     #     result = await fastapi.create_agent(agent_conf=c, gpt_id=gpt_id)
     #     print(result)
