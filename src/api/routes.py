@@ -501,9 +501,7 @@ async def chat(request: ChatMessage):
             browser_plugin_instance = monitor_service.get_agent(co_instance_id)
             gpt_user_id = browser_plugin_instance.get_gpt_user_id()
             
-            # 将 dataframe 转换为格式化的字符串
-            dataframe_str = json.dumps(request.dataframe, ensure_ascii=False, indent=2)
-            content = f'user nlp: {request.content}, dataframe: {dataframe_str}'
+            content = f"user message: {request.content}\n response format: if output contain table list, return markdown format \n Note: If the user's question is knowledge-like, it should not run agent"
             
             print("gpt_user_id", gpt_user_id)
             check_trade_action_content = CheckTradeActionRequest(nlp=request.content)
