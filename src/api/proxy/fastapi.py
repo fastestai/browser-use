@@ -197,17 +197,24 @@ async def main():
 
     agent_configs=[
         {
-            "name": "researcher_agent",
+            "name": "crypto_researcher_agent",
             "description": "Conduct research and analysis if necessary. Can be called multiple times.",
             "system_message": "### Role Description\nYou are a researcher based on the user's instruction to generate a research report. Only proceed when delegated.\n### Workflow\n1. Understand the user instruction\n2. Conduct research by listing the data you get\n3. Generate the research report\n### Input\n* user instruction\n### Output\n1. On top, tell me your execution plan\n2. Pass your report to the next agent [\"dataframe_transform\"]",
-            "model": "openai/gpt-4o-2024-11-20",
+            "model": "qwen-max",
             "tools": [ "dataframe_transform"]
         },
         {
-            "name": "reply_agent",
+            "name": "crypto_analyst_agent",
             "description": "Gather the result from the previous agent, answer the question from the user instruction.",
             "system_message": "### Role Description\nYour goal is to provide clear, accurate, and easy-to-understand answers to user inquiries, drawing upon the information provided in the research report.\n### Workflow\n1. Receive the result from the previous agent\n2. Receive the user's question or instruction (user_instruction).\n3. Acknowledge the user's question by restating it to ensure you understand their needs.\n4. Based on the research report, craft a detailed and helpful answer for the user.\n5. Present the answer in a polite, conversational, and easy-to-understand tone, as if engaging in a one-on-one conversation.\n### Input\n* result from the previous agent\n* user_instruction: The user's question or request.\n### Output\nYour reply should follow this format to ensure clarity and a positive user experience:\n* **[Confirmation]:** Begin by restating the user's question or request to confirm your understanding. For example: \"Thank you for your question! I understand you'd like to know...\"\n* **[Answer]:** Provide a direct and concise answer to the user's question, based on the research report.\n* **[Explanation]:** Elaborate on your answer, providing context, reasoning, and any relevant details from the research report. Mention any specific tools, approaches, or methodologies used in the research that support your answer. The goal is to make the answer as clear and helpful as possible.\n* **[Closing]:** End with a polite closing, such as: \"I hope this helps! Please let me know if you have any further questions.\" or \"We're here to assist you further if needed.\"\n\nIf there contains a list of items, Return as a table list in Markdown format.",
-            "model": "openai/gpt-4o-2024-11-20"
+            "model": "qwen-max"
+        },
+        {
+            "name": "crypto_execution_agent",
+            "description": "Call tool by user provide action trade nlp. Work depends on whether called according to user instruction.",
+            "system_message": "### Role Description\nYou are a professional trading agent who calls action tools. You are idle unless you are required to work by user instruction.\n### Workflow\n1. Build the request by the request schema of the tool and execution action by user-provided action trade nlp\n2. Call the tool\n3. Wait for the operation result\n### Input\n* nlp from the user\n### Output\n* action result and format as the response schema of the tool\n* reply including:\nTrade Execution Parameters:\n- Token: SEXCOIN (highest percentage increase)\n- Platform: gmgn.ai (Solana blockchain)\n- Purchase Amount: 0.01 share\n- Current Token Details:\n* Price: Approximately $0.00 (micro-price range)\n* 24h Volume: $182.7K\n* Price Increase: +3,200%",
+            "model": "qwen-max",
+            "tools": ["browser_action_nlp"],
         }
     ]
 
@@ -216,8 +223,8 @@ async def main():
     # print("gpt_id", gpt_id)
     # gpt_user_id = await fastapi.create_gpt_user()
     # print(gpt_user_id)
-    gpt_id = '67af2136f2a584eaa3ecfb6c'
-    gpt_user_id = '67af1064db80df16e4b189c9'
+    gpt_id = '67b036473feaa412f79ead94'
+    # gpt_user_id = '67af1064db80df16e4b189c9'
     register_result = await fastapi.gpt_register_tool(gpt_id)
     print("register_result", register_result)
     for c in agent_configs:

@@ -490,7 +490,7 @@ async def chat(request: ChatMessage):
         # 设置超时时间为5分钟
         timeout = 300  # 秒
         async with asyncio.timeout(timeout):  # 使用 asyncio.timeout 上下文管理器
-            gpt_id = '67af1045db80df16e4b1880f'
+            gpt_id = '67b036473feaa412f79ead94'
 
             co_instance_id = request.co_instance_id
             if co_instance_id not in monitor_service.get_agents():
@@ -509,7 +509,7 @@ async def chat(request: ChatMessage):
             check_trade_action_content = CheckTradeActionRequest(nlp=request.content)
             check_result = await check_trade_action(check_trade_action_content)
             print("check_result", check_result)
-            agent_ids = []
+            agent_ids = ["67b036623feaa412f79ead98","67b036633feaa412f79ead9a","67b036633feaa412f79ead9c"]
             # 在调用 get_chat_response 时传入超时参数
             response = await fastapi.get_chat_response(
                 gpt_user_id, 
