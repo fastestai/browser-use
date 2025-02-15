@@ -506,8 +506,11 @@ async def chat(request: ChatMessage):
             print("gpt_user_id", gpt_user_id)
             check_trade_action_content = CheckTradeActionRequest(nlp=request.content)
             check_result = await check_trade_action(check_trade_action_content)
+
             print("check_result", check_result)
             agent_ids = ["67b072e0b80b8cbfc76faf46","67b036633feaa412f79ead9a","67b04bee9b9a465aee960826"]
+            if check_result["parsed"].is_trade_action:
+                agent_ids=["67b04bee9b9a465aee960826"]
             # 在调用 get_chat_response 时传入超时参数
             response = await fastapi.get_chat_response(
                 gpt_user_id, 
