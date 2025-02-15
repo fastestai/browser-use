@@ -501,16 +501,16 @@ async def chat(request: ChatMessage):
             browser_plugin_instance = monitor_service.get_agent(co_instance_id)
             gpt_user_id = browser_plugin_instance.get_gpt_user_id()
             
-            content = f"user message: {request.content}\n response format: if output contain table list, return markdown format"
+            content = f"user message: {request.content}"
             
             print("gpt_user_id", gpt_user_id)
             check_trade_action_content = CheckTradeActionRequest(nlp=request.content)
             check_result = await check_trade_action(check_trade_action_content)
-
             print("check_result", check_result)
-            agent_ids = ["67b072e0b80b8cbfc76faf46","67b036633feaa412f79ead9a","67b04bee9b9a465aee960826"]
-            if check_result["parsed"].is_trade_action:
-                agent_ids=["67b04bee9b9a465aee960826"]
+            agent_ids = ["67b04bee9b9a465aee960826"]
+            if not check_result["parsed"].is_trade_action:
+                agent_ids = ["67b0cbde9bb146c2d8052bfb", "67b036633feaa412f79ead9a"]
+                content += '\n response format: if output contain table list, return markdown format'
             # 在调用 get_chat_response 时传入超时参数
             response = await fastapi.get_chat_response(
                 gpt_user_id, 
