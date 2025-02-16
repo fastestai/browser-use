@@ -509,7 +509,7 @@ async def chat(request: ChatMessage):
             print("check_result", check_result)
             agent_ids = ["67b04bee9b9a465aee960826"]
             if not check_result["parsed"].is_trade_action:
-                agent_ids = ["67b0cbde9bb146c2d8052bfb", "67b036633feaa412f79ead9a"]
+                agent_ids = ["67b176a29bb146c2d80533b9", "67b036633feaa412f79ead9a"]
                 content += '\n response format: if output contain table list, return markdown format'
             # 在调用 get_chat_response 时传入超时参数
             response = await fastapi.get_chat_response(
