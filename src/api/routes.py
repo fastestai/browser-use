@@ -232,10 +232,11 @@ async def get_next_action(request: ActionRequest):
         500: 服务器内部错误
     """
     try:
-        api_service = ApiService(request.task, ChatOpenAI(model_name="gpt-4o-mini"))
+        api_service = ApiService(request.task, ChatOpenAI(model_name="gpt-4o"))
         # 2. 调用模型获取下一步动作
         # 这里需要实例化您的 LLM 和 Agent
         # 注意：这部分可能需要根据您的具体需求进行调整
+        print("task:", request.task)
         model_output = await api_service.get_next_actions(request.dom_tree, request.url, request.title, request.tabs)
         print(model_output)
         return model_output
@@ -509,7 +510,7 @@ async def chat(request: ChatMessage):
             print("check_result", check_result)
             agent_ids = ["67b04bee9b9a465aee960826"]
             if not check_result["parsed"].is_trade_action:
-                agent_ids = ["67b176a29bb146c2d80533b9", "67b036633feaa412f79ead9a"]
+                agent_ids = ["67b196403b306b213a6d1cc0", "67b036633feaa412f79ead9a"]
                 content += '\n response format: if output contain table list, return markdown format'
             # 在调用 get_chat_response 时传入超时参数
             response = await fastapi.get_chat_response(

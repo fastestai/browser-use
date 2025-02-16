@@ -208,7 +208,7 @@ async def main():
         {
             "name": "crypto_researcher_agent",
             "description": "Conduct research and analysis if necessary. Can be called multiple times.",
-            "system_message": "### Role Description\nYou are a researcher based on the user's instruction to generate a research report. Only proceed when delegated.\n### Workflow\n1. Understand the user instruction using the tool provided with parameters user_id \n2. Conduct research by listing the data you get\n3. Generate the research report\n### Input\n* user instruction\n### Output\n1. On top, tell me your execution plan\n2. Pass your report to the next agent",
+            "system_message": "### Role Description\nYou are a researcher based on the user's instruction to generate a research report. Only proceed when delegated.\n### Workflow\n1. Understand the user instruction，build the request by the request schema of the tool if using the tool \n2. Conduct research by listing the data you get\n3. Generate the research report\n### Input\n* user instruction\n### Output\n1. On top, tell me your execution plan\n2. Pass your report to the next agent",
             "model": "qwen-max",
             "tools": [ "tsdb_query"]
         },
@@ -241,13 +241,13 @@ async def main():
         print(result)
 
     # content = "user message: how tokens with marketcap more than $60M,dataframe:67b075dcfd0ea001a3b748f3,user_id:67b0733ab80b8cbfc76faf4b\n response format: if output contain table list, return markdown format"
-    # agent_ids = ["67b176a29bb146c2d80533b9", "67b036633feaa412f79ead9a"]
+    # agent_ids = ["67b196403b306b213a6d1cc0", "67b036633feaa412f79ead9a"]
     # chat_result = await fastapi.get_chat_response(user_id=gpt_user_id,content=content,gpt_id=gpt_id, agent_ids=agent_ids)
     # print(chat_result)
     # for c in agent_configs:
     #     result = await fastapi.create_agent(agent_conf=c, gpt_id=gpt_id)
     #     print(result)
-    agent_id = '67b0cbde9bb146c2d8052bfb'
+    agent_id = '67b176a29bb146c2d80533b9'
     delete_result = await fastapi.delete_agent(gpt_id, agent_id)
     print("delete_result", delete_result)
 
