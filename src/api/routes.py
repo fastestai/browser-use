@@ -343,6 +343,7 @@ async def check_target_page(request: CheckTargetPageRequest):
 @router.post("/agent/register")
 async def register_agent(request: AgentRegisterRequest):
     """SSE endpoint for monitoring agent progress"""
+    print("agent register", request.agent_id)
     agent_id = request.agent_id
     if agent_id in monitor_service.agents:
         return
