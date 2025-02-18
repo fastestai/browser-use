@@ -22,7 +22,7 @@ class MySystemPrompt(SystemPrompt):
 
 async def main():
     agent = Agent(
-        task="Go to GMGN, search for 'Trump', buy 100 amount",
+        task="search dog and open first web page",
         llm=ChatOpenAI(model="gpt-4o"),
         system_prompt_class=MySystemPrompt
     )

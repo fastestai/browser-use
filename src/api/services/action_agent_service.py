@@ -2,16 +2,11 @@ from typing import List, Optional
 
 from browser_use.browser.views import BrowserState, TabInfo
 
-from langchain_core.messages import HumanMessage, SystemMessage
-
-
-
-import asyncio
 
 
 from browser_use.agent.message_manager.service import MessageManager
 from browser_use.agent.views import (
-	AgentOutput
+    AgentOutput, ActionResult
 )
 
 from langchain_openai import ChatOpenAI  # 或其他您使用的LLM
@@ -49,7 +44,7 @@ class MySystemPrompt(SystemPrompt):
 
 # Define the output format as a Pydantic model
 
-class ApiService:
+class ActionAgentService:
     def __init__(self, task, llm, controller=Controller()):
         self.llm = llm
         self.task = task
@@ -64,6 +59,7 @@ class ApiService:
         self.tool_calling_method = 'function_calling'
         self._setup_action_models()
         self.current_state = Optional[BrowserState]
+        self.latest_result: Optional[List[ActionResult]] = None
 
     def _setup_action_models(self) -> None:
         """Setup dynamic action models from controller's registry"""
@@ -181,7 +177,7 @@ class ApiService:
     async def get_next_actions(self, dom_tree: dict, url: str, title: str, tabs: List[TabInfo]):
         self._set_current_state(dom_tree, url, title, tabs)
 
-        self.message_manager.add_state_message(self.current_state)
+        self.message_manager.add_state_message(self.current_state, self.latest_result)
 
         input_messages = self.message_manager.get_messages()
         print("input_messages", input_messages)
@@ -194,35 +190,38 @@ class ApiService:
         return response
 
 
+    async def set_action_result(self, result: ActionResult):
+        self.latest_result = [result]
+        return self.latest_result
+
+
+class ActionAgentConfig(BaseModel):
+    task: str
+    llm: Optional[ChatOpenAI]
+
+class ActionAgentManager:
+
+    def __init__(self):
+        self.action_agents = {}
+
+    def register(self, agent_id: str, action_agent: ActionAgentService):
+        self.action_agents[agent_id] = action_agent
+
+    def get_agent(self, agent_id: str, action_agent_conf: ActionAgentConfig) -> Optional[ActionAgentService]:
+        if agent_id not in self.action_agents:
+            action_agent = ActionAgentService(
+                task=action_agent_conf.task or '',
+                llm=action_agent_conf.llm or ChatOpenAI(model_name="gpt-4o")
+            )
+            self.register(agent_id, action_agent)
+        return self.action_agents[agent_id]
+
+    def unregister(self, agent_id: str):
+        del self.action_agents[agent_id]
+
+
+
 class IsTargetPage(BaseModel):
     result: bool
-async def main() -> None:
-    current_page_url = "https://www.google.com/search?q=gmgn.ai&udm=14"
-    llm = ChatOpenAI(model_name="gpt-4o-mini")
-    plan_message = """
-    You are a precise browser automation agent that interacts with websites through structured commands. Your role is to:
-1. Analyze the provided webpage url
-2. Determine if you are already on the target page https://gmgn.ai
-3. Respond with valid JSON containing the result of determine
-
-INPUT STRUCTURE:
-Current URL: The webpage you're currently on 
-
-RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format: 
-{"result": true}
-    """
-    system_message = SystemMessage(content=plan_message)
-    human_message = HumanMessage(content=f"""
-    Current url: {current_page_url}
-    """)
-
-    msg = [system_message, human_message]
-
-    structured_llm = llm.with_structured_output(schema=IsTargetPage, include_raw=True, method="function_calling")
-    result = await structured_llm.ainvoke(msg)
-    print(result)
-
-if __name__ == '__main__':
-    asyncio.run(main())
 
 

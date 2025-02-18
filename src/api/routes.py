@@ -11,12 +11,15 @@ import json
 import pydash
 
 from browser_use.agent.prompts import SystemPrompt
-from src.api.services.api_service import ApiService
+from src.api.services.action_agent_service import ActionAgentService, ActionAgentManager, ActionAgentConfig
 from langchain_openai import ChatOpenAI  # 或其他您使用的LLM
 from browser_use.browser.views import BrowserState, BrowserStateHistory, TabInfo
 from langchain_core.messages import HumanMessage, SystemMessage
 from src.api.services.monitor_service import MonitorService, BrowserPluginMonitorAgent
 from src.api.proxy.fastapi import FastApi
+from browser_use.agent.views import (
+    AgentOutput, ActionResult
+)
 
 
 router = APIRouter(include_in_schema=False)
@@ -26,6 +29,8 @@ public_router = APIRouter(
 monitor_service = MonitorService()
 
 fastapi = FastApi()
+
+action_agent_manager = ActionAgentManager()
 
 
 class ActionRequest(BaseModel):
@@ -61,6 +66,8 @@ class ActionRequest(BaseModel):
         ...,
         description="浏览器标签页列表"
     )
+    chat_request_id: str
+
 
 
 class ContextRequest(BaseModel):
@@ -165,6 +172,10 @@ class IsTargetPage(BaseModel):
 class CheckAgent(BaseModel):
     use_agent: bool
 
+class ActionResultRequest(BaseModel):
+    chat_request_id: str
+    result: ActionResult
+
 class CheckTradeActionRequest(BaseModel):
     """
     检查交易动作的请求结构
@@ -203,6 +214,24 @@ class GetDataframe(BaseModel):
     dataframe: dict
 
 
+
+@router.post("/action/result")
+async def action_result(request: ActionResultRequest):
+    try:
+        chat_request_id = request.chat_request_id
+        print(request.chat_request_id)
+        print(request.result)
+        action_agent_conf = ActionAgentConfig(task='', llm=None)
+        action_agent = action_agent_manager.get_agent(chat_request_id, action_agent_conf)
+        # 2. 调用模型获取下一步动作
+        # 这里需要实例化您的 LLM 和 Agent
+        # 注意：这部分可能需要根据您的具体需求进行调整
+        result = await action_agent.set_action_result(result=request.result)
+        print("result:", result)
+        return result
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=str(e))
 @router.post("/get_next_action")
 async def get_next_action(request: ActionRequest):
     """
@@ -232,15 +261,18 @@ async def get_next_action(request: ActionRequest):
         500: 服务器内部错误
     """
     try:
-        api_service = ApiService(request.task, ChatOpenAI(model_name="gpt-4o"))
+        chat_request_id = request.chat_request_id
+        action_agent_conf = ActionAgentConfig(task=request.task,llm=None)
+        action_agent = action_agent_manager.get_agent(chat_request_id, action_agent_conf)
         # 2. 调用模型获取下一步动作
         # 这里需要实例化您的 LLM 和 Agent
         # 注意：这部分可能需要根据您的具体需求进行调整
         print("task:", request.task)
-        model_output = await api_service.get_next_actions(request.dom_tree, request.url, request.title, request.tabs)
+        model_output = await action_agent.get_next_actions(request.dom_tree, request.url, request.title, request.tabs)
         print(model_output)
         return model_output
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -453,44 +485,14 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
 
 
 
-# async def check_execution_agent(content: str):
-#     try:
-#         llm = ChatOpenAI(model_name="gpt-4o")
-#         plan_message = """
-#         You are an accurate route decision maker who can determine whether to use an agent based on the user's description and the corresponding question. Your role is to:
-#         1. Analyze the provided context of user
-#         2. Match the corresponding question, return the result, if not matched return use agent is false
-#         3. Respond with valid JSON containing the result of determine
-#
-#         QUESTION LIST:
-#         1. What token I buy? -> use_agent: false
-#         2. I buy 0.01 trump -> use_agent:
-#
-#         INPUT STRUCTURE:
-#         Content: the content provided by the user
-#
-#         RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format:
-#         {"use_agent": true}
-#             """
-#         system_message = SystemMessage(content=plan_message)
-#         human_message = HumanMessage(content=f"""
-#             Content: {content}
-#             """)
-#
-#         msg = [system_message, human_message]
-#
-#         structured_llm = llm.with_structured_output(schema=CheckAgent, include_raw=True, method="function_calling")
-#         result = await structured_llm.ainvoke(msg)
-#         print(result)
-#         return result
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 @router.post("/chat")
 async def chat(request: ChatMessage):
     try:
-        # 设置超时时间为5分钟
-        timeout = 300  # 秒
+        # 设置超时时间为60分钟
+        timeout = 3600  # 秒
         async with asyncio.timeout(timeout):  # 使用 asyncio.timeout 上下文管理器
             gpt_id = '67b036473feaa412f79ead94'
 
