@@ -25,6 +25,11 @@ from browser_use.dom.views import (
 )
 from pydantic import BaseModel
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 
 class MySystemPrompt(SystemPrompt):
     def important_rules(self) -> str:
@@ -180,19 +185,32 @@ class ActionAgentService:
         self.message_manager.add_state_message(self.current_state, self.latest_result)
 
         input_messages = self.message_manager.get_messages()
-        print("input_messages", input_messages)
 
         structured_llm = self.llm.with_structured_output(self.AgentOutput, include_raw=True,
                                                          method=self.tool_calling_method)
         response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
-        print("reponse", response)
         parsed: AgentOutput | None = response['parsed']
+        self.log_response(parsed)
         return response
-
 
     async def set_action_result(self, result: ActionResult):
         self.latest_result = [result]
         return self.latest_result
+
+    def log_response(self, response: AgentOutput) -> None:
+        """Log the model's response"""
+        if 'Success' in response.current_state.evaluation_previous_goal:
+            emoji = '👍'
+        elif 'Failed' in response.current_state.evaluation_previous_goal:
+            emoji = '⚠'
+        else:
+            emoji = '🤷'
+        logger.debug(f'🤖 {emoji} Page summary: {response.current_state.page_summary}')
+        logger.info(f'{emoji} Eval: {response.current_state.evaluation_previous_goal}')
+        logger.info(f'🧠 Memory: {response.current_state.memory}')
+        logger.info(f'🎯 Next goal: {response.current_state.next_goal}')
+        for i, action in enumerate(response.action):
+            logger.info(f'🛠️  Action {i + 1}/{len(response.action)}: {action.model_dump_json(exclude_unset=True)}')
 
 
 class ActionAgentConfig(BaseModel):

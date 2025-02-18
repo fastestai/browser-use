@@ -20,6 +20,9 @@ from src.api.proxy.fastapi import FastApi
 from browser_use.agent.views import (
     AgentOutput, ActionResult
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(include_in_schema=False)
@@ -219,19 +222,17 @@ class GetDataframe(BaseModel):
 async def action_result(request: ActionResultRequest):
     try:
         chat_request_id = request.chat_request_id
-        print(request.chat_request_id)
-        print(request.result)
         action_agent_conf = ActionAgentConfig(task='', llm=None)
         action_agent = action_agent_manager.get_agent(chat_request_id, action_agent_conf)
         # 2. 调用模型获取下一步动作
         # 这里需要实例化您的 LLM 和 Agent
         # 注意：这部分可能需要根据您的具体需求进行调整
         result = await action_agent.set_action_result(result=request.result)
-        print("result:", result)
         return result
     except Exception as e:
-        print(e)
+        logger.error("action result err:", e)
         raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/get_next_action")
 async def get_next_action(request: ActionRequest):
     """
@@ -264,28 +265,12 @@ async def get_next_action(request: ActionRequest):
         chat_request_id = request.chat_request_id
         action_agent_conf = ActionAgentConfig(task=request.task,llm=None)
         action_agent = action_agent_manager.get_agent(chat_request_id, action_agent_conf)
-        # 2. 调用模型获取下一步动作
-        # 这里需要实例化您的 LLM 和 Agent
-        # 注意：这部分可能需要根据您的具体需求进行调整
-        print("task:", request.task)
         model_output = await action_agent.get_next_actions(request.dom_tree, request.url, request.title, request.tabs)
-        print(model_output)
         return model_output
     except Exception as e:
-        print(e)
+        logger.error("action result err:", e)
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.post("/get_plan")
-async def get_plan(request: PlanRequest):
-    try:
-        llm = ChatOpenAI(model_name="gpt-4o-mini")
-        plan_message = f"""{request.llm}"""
-        structured_llm = llm.with_structured_output(schema=Steps, include_raw=True, method="function_calling")
-        result = await structured_llm.ainvoke(plan_message)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/check_trade_action")
@@ -336,9 +321,9 @@ async def check_trade_action(request: CheckTradeActionRequest):
 
         structured_llm = llm.with_structured_output(schema=CheckTradeAction, include_raw=True, method="function_calling")
         result = await structured_llm.ainvoke(msg)
-        print(result)
         return result
     except Exception as e:
+        logger.error("check trade action", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/check_target_page")
@@ -366,20 +351,19 @@ async def check_target_page(request: CheckTargetPageRequest):
 
         structured_llm = llm.with_structured_output(schema=IsTargetPage, include_raw=True, method="function_calling")
         result = await structured_llm.ainvoke(msg)
-        print(result)
         return result
     except Exception as e:
+        logger.error("check target page", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/agent/register")
 async def register_agent(request: AgentRegisterRequest):
     """SSE endpoint for monitoring agent progress"""
-    print("agent register", request.agent_id)
     agent_id = request.agent_id
     if agent_id in monitor_service.agents:
+        logger.info("agent already register")
         return
-    # todo production open
     create_gpt_result = await fastapi.create_gpt_user()
     user_id =create_gpt_result.data["user_id"]
     # user_id = '67ac39d50cef4ea4cf0df45b'
@@ -465,14 +449,11 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
     """
     user_id = request.context.user_id
     content = request.content
-    print("content", content)
-    print("user_id:", user_id)
     agents = monitor_service.get_agents()
-    for agent in agents.values():
-        print(agent.get_gpt_user_id())
     match_agent = pydash.find(agents.values(), lambda a: a.get_gpt_user_id() == user_id)
 
     if match_agent is None:
+        logger.error("agent not found")
         raise HTTPException(
             status_code=500, 
             detail="Monitor Agent not found"
@@ -482,11 +463,6 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
         status="success",
         message=f"start action: {content}"
     )
-
-
-
-
-
 
 @router.post("/chat")
 async def chat(request: ChatMessage):
@@ -507,10 +483,8 @@ async def chat(request: ChatMessage):
             
             content = f"user message: {request.content}"
             
-            print("gpt_user_id", gpt_user_id)
             check_trade_action_content = CheckTradeActionRequest(nlp=request.content)
             check_result = await check_trade_action(check_trade_action_content)
-            print("check_result", check_result)
             agent_ids = ["67b04bee9b9a465aee960826"]
             if not check_result["parsed"].is_trade_action:
                 agent_ids = ["67b196403b306b213a6d1cc0", "67b036633feaa412f79ead9a"]
@@ -525,8 +499,6 @@ async def chat(request: ChatMessage):
             response_content = pydash.get(response.data, 'content')
             if check_result["parsed"].is_trade_action:
                 response_content = ''
-            # if check_result["parsed"].is_trade_action and browser_plugin_instance.get_status_queue_size() < 1:
-            #     await browser_plugin_instance.status_queue.put(request.content)
             return response_content
 
     except asyncio.TimeoutError:
@@ -535,7 +507,7 @@ async def chat(request: ChatMessage):
             detail=f"Request timed out after {timeout} seconds"
         )
     except Exception as e:
-        print(e)
+        logger.error("chat", e)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to process chat message: {str(e)}"
