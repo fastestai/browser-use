@@ -118,6 +118,8 @@ class Agent:
 		self.use_vision_for_planner = use_vision_for_planner
 		self.llm = llm
 		self.save_conversation_path = save_conversation_path
+		if self.save_conversation_path and '/' not in self.save_conversation_path:
+			self.save_conversation_path = f'{self.save_conversation_path}/'
 		self.save_conversation_path_encoding = save_conversation_path_encoding
 		self._last_result = None
 		self.include_attributes = include_attributes
@@ -219,12 +221,15 @@ class Agent:
 
 	def _set_model_names(self) -> None:
 		self.chat_model_library = self.llm.__class__.__name__
-		if hasattr(self.llm, 'model_name'):
-			self.model_name = self.llm.model_name  # type: ignore
-		elif hasattr(self.llm, 'model'):
-			self.model_name = self.llm.model  # type: ignore
-		else:
-			self.model_name = 'Unknown'
+		self.model_name = "Unknown"
+		# Check for 'model_name' attribute first
+		if hasattr(self.llm, "model_name"):
+			model = self.llm.model_name
+			self.model_name = model if model is not None else "Unknown"
+		# Fallback to 'model' attribute if needed
+		elif hasattr(self.llm, "model"):
+			model = self.llm.model
+			self.model_name = model if model is not None else "Unknown"
 
 		if self.planner_llm:
 			if hasattr(self.planner_llm, 'model_name'):
@@ -238,7 +243,6 @@ class Agent:
 
 	def _setup_action_models(self) -> None:
 		"""Setup dynamic action models from controller's registry"""
-		# Get the dynamic action model from controller's registry
 		self.ActionModel = self.controller.registry.create_action_model()
 		# Create output model with the dynamic actions
 		self.AgentOutput = AgentOutput.type_with_custom_actions(self.ActionModel)
@@ -643,6 +647,9 @@ class Agent:
 			return True
 
 		class ValidationResult(BaseModel):
+			"""
+			Validation results.
+			"""
 			is_valid: bool
 			reason: str
 
@@ -686,6 +693,7 @@ class Agent:
 				page_extraction_llm=self.page_extraction_llm,
 				check_break_if_paused=lambda: self._check_if_stopped_or_paused(),
 				available_file_paths=self.available_file_paths,
+				sensitive_data=self.sensitive_data,
 			)
 
 		results = []
@@ -746,6 +754,7 @@ class Agent:
 			self.browser_context,
 			page_extraction_llm=self.page_extraction_llm,
 			check_break_if_paused=lambda: self._check_if_stopped_or_paused(),
+			sensitive_data=self.sensitive_data,
 		)
 
 		await asyncio.sleep(delay)
@@ -819,29 +828,50 @@ class Agent:
 			logger.warning('No history or first screenshot to create GIF from')
 			return
 
-		# Try to load nicer fonts
+		# Try to load fonts with multi-language support
 		try:
 			# Try different font options in order of preference
-			font_options = ['Helvetica', 'Arial', 'DejaVuSans', 'Verdana']
-			font_loaded = False
+			# System-specific fonts
+			if platform.system() == 'Windows':
+				font_options = [
+					'msyh.ttc',  # Microsoft YaHei
+					'seguiemj.ttf',  # Segoe UI Emoji
+					'segoe.ttf',  # Segoe UI
+				]
+			elif platform.system() == 'Darwin':  # macOS
+				font_options = [
+					'Hiragino Sans GB',  # Primary font with full Unicode support (CJK + Latin)
+					'.AppleSystemUIFont',  # System UI font as fallback
+					'Apple Color Emoji',  # Emoji and special characters
+				]
+			else:  # Linux and others
+				font_options = [
+					'/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+				]
 
+			# Add common fallback fonts
+			font_options.extend(['Arial Unicode MS', 'Helvetica', 'Arial', 'DejaVuSans', 'Verdana'])
+
+			font_loaded = False
 			for font_name in font_options:
 				try:
 					if platform.system() == 'Windows':
-						# Need to specify the abs font path on Windows
-						font_name = os.path.join(os.getenv('WIN_FONT_DIR', 'C:\\Windows\\Fonts'), font_name + '.ttf')
+						if not font_name.endswith(('.ttf', '.ttc')):
+							font_name = os.path.join(os.getenv('WIN_FONT_DIR', 'C:\\Windows\\Fonts'), font_name + '.ttf')
 					regular_font = ImageFont.truetype(font_name, font_size)
 					title_font = ImageFont.truetype(font_name, title_font_size)
 					goal_font = ImageFont.truetype(font_name, goal_font_size)
+					logger.debug(f'Loaded font: {font_name}')
 					font_loaded = True
 					break
 				except OSError:
 					continue
 
 			if not font_loaded:
-				raise OSError('No preferred fonts found')
+				raise OSError('No suitable fonts found')
 
 		except OSError:
+			logger.warning('Failed to load Unicode fonts, falling back to default')
 			regular_font = ImageFont.load_default()
 			title_font = ImageFont.load_default()
 
