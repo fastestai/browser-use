@@ -144,7 +144,7 @@ async def register_agent(request: AgentRegisterRequest):
         return
     create_gpt_result = await fastapi.create_gpt_user()
     user_id =create_gpt_result.data["user_id"]
-    # user_id = '67ac39d50cef4ea4cf0df45b'
+    logger.info(f"user id: {user_id}")
     monitor_agent = BrowserPluginMonitorAgent(browser_plugin_id=agent_id, gpt_user_id=user_id)
     monitor_service.register_agent(agent_id, monitor_agent)
     return {"user_id": user_id}
