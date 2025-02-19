@@ -268,6 +268,8 @@ async def chat(request: ChatMessage):
             if not check_result["parsed"].is_trade_action:
                 agent_ids = [RESEARCH_AGENT_ID, ANALYZE_AGENT_ID]
                 content += '\n response format: if output contain table list, return markdown format'
+            else:
+                content = f'user message: ${check_result["parsed"].action} ${check_result["parsed"].amount} ${check_result["parsed"].unit} ${check_result["parsed"].coin_name}'
             # 在调用 get_chat_response 时传入超时参数
             response = await fastapi.get_chat_response(
                 gpt_user_id, 

@@ -12,6 +12,7 @@ class CheckTradeAction(BaseModel):
     action: str
     coin_name: str
     amount: float
+    unit: str
 
 class ActionAgentConfig(BaseModel):
     task: str
