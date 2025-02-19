@@ -80,7 +80,7 @@ async def get_next_action(request: ActionRequest):
         model_output = await action_agent.get_next_actions(request.dom_tree, request.url, request.title, request.tabs)
         return model_output
     except Exception as e:
-        logger.error("action result err:", e)
+        logger.error(f"action result err: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -118,7 +118,7 @@ async def check_trade_action(request: CheckTradeActionRequest):
         )
         return result
     except Exception as e:
-        logger.error("check trade action", e)
+        logger.error(f"check trade action error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/check_target_page")
@@ -131,7 +131,7 @@ async def check_target_page(request: CheckTargetPageRequest):
         )
         return result
     except Exception as e:
-        logger.error("check target page", e)
+        logger.error(f"check target page error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

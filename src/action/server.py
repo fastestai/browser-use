@@ -165,6 +165,7 @@ class ActionAgentService:
                                                          method=self.tool_calling_method)
         response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
         parsed: AgentOutput | None = response['parsed']
+        logger.info(f"Received parsed data: {parsed}")
         self.log_response(parsed)
         return response
 
