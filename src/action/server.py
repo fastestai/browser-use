@@ -1,19 +1,13 @@
+import logging
+
 from typing import List, Optional
 
 from browser_use.browser.views import BrowserState, TabInfo
-
-
-
 from browser_use.agent.message_manager.service import MessageManager
 from browser_use.agent.views import (
     AgentOutput, ActionResult
 )
-
-from langchain_openai import ChatOpenAI  # 或其他您使用的LLM
-
 from browser_use.controller.service import Controller
-from browser_use.agent.prompts import SystemPrompt
-
 from browser_use.dom.history_tree_processor.view import Coordinates
 from browser_use.dom.views import (
 	CoordinateSet,
@@ -23,31 +17,12 @@ from browser_use.dom.views import (
 	SelectorMap,
 	ViewportInfo,
 )
-from pydantic import BaseModel
 
-import logging
+from src.action.models import MySystemPrompt
+
 
 logger = logging.getLogger(__name__)
 
-
-
-class MySystemPrompt(SystemPrompt):
-    def important_rules(self) -> str:
-        # Get existing rules from parent class
-        existing_rules = super().important_rules()
-
-        # Add your custom rules
-        new_rules = """
-9. MOST IMPORTANT RULE:
-- You know very clearly how to operate cryptocurrency trading
-- the web url of gmgn is https://gmgn.ai
-"""
-
-        # Make sure to use this pattern otherwise the exiting rules will be lost
-        return f'{existing_rules}\n{new_rules}'
-
-
-# Define the output format as a Pydantic model
 
 class ActionAgentService:
     def __init__(self, task, llm, controller=Controller()):
@@ -198,7 +173,7 @@ class ActionAgentService:
         return self.latest_result
 
     def log_response(self, response: AgentOutput) -> None:
-        """Log the model's response"""
+
         if 'Success' in response.current_state.evaluation_previous_goal:
             emoji = '👍'
         elif 'Failed' in response.current_state.evaluation_previous_goal:
@@ -211,35 +186,4 @@ class ActionAgentService:
         logger.info(f'🎯 Next goal: {response.current_state.next_goal}')
         for i, action in enumerate(response.action):
             logger.info(f'🛠️  Action {i + 1}/{len(response.action)}: {action.model_dump_json(exclude_unset=True)}')
-
-
-class ActionAgentConfig(BaseModel):
-    task: str
-    llm: Optional[ChatOpenAI]
-
-class ActionAgentManager:
-
-    def __init__(self):
-        self.action_agents = {}
-
-    def register(self, agent_id: str, action_agent: ActionAgentService):
-        self.action_agents[agent_id] = action_agent
-
-    def get_agent(self, agent_id: str, action_agent_conf: ActionAgentConfig) -> Optional[ActionAgentService]:
-        if agent_id not in self.action_agents:
-            action_agent = ActionAgentService(
-                task=action_agent_conf.task or '',
-                llm=action_agent_conf.llm or ChatOpenAI(model_name="gpt-4o")
-            )
-            self.register(agent_id, action_agent)
-        return self.action_agents[agent_id]
-
-    def unregister(self, agent_id: str):
-        del self.action_agents[agent_id]
-
-
-
-class IsTargetPage(BaseModel):
-    result: bool
-
 

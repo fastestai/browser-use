@@ -1,10 +1,11 @@
-from typing import Optional, Dict, Any, List
 import aiohttp
-import json
 import logging
+import asyncio
+import os
+
 from datetime import datetime
 from pydantic import BaseModel
-import asyncio
+from typing import Optional, Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class FastApi:
         Args:
             api_key: API key for authentication (if required)
         """
-        self.base_url = 'https://api.fastest.ai'
+        self.base_url = os.getenv('FASTEST_HOST')
         self.api_key = api_key
         self.session: Optional[aiohttp.ClientSession] = None
         # 设置默认超时时间（秒）
@@ -69,8 +70,8 @@ class FastApi:
         """
         await self._ensure_session()
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
-        print("url", url)
-        print("data", data)
+        logger.info(f"url ====> {url}")
+        logger.info(f"reqyest data =====> {data}")
 
         # 使用请求特定的超时或默认超时
         request_timeout = aiohttp.ClientTimeout(total=timeout) if timeout else self.timeout
@@ -84,9 +85,9 @@ class FastApi:
                 timeout=request_timeout
             ) as response:
                 content = await response.read()
-                print("content",content)
+                logger.info(f"content: {content}")
                 response_data = await response.json()
-                print("response_data", response_data)
+                logger.info(f"response_data: {response_data}")
                 
                 if response.status >= 400:
                     return ApiResponse(
@@ -106,7 +107,7 @@ class FastApi:
                 error="Request timed out"
             )
         except Exception as e:
-            logger.error(f"API request failed: {str(e)}")
+            logger.error(f"API request failed: {e}")
             return ApiResponse(
                 success=False,
                 error=f"Request failed: {str(e)}"
@@ -136,7 +137,7 @@ class FastApi:
 
         now = datetime.now()
         result = await self._request("POST", "/v2/chat", data=data, timeout=360000)
-        print('time comuse ===>', datetime.now() - now)
+        logger.info(f'time comuse ===> {datetime.now() - now}')
         return result
 
     async def create_gpt_user(self):
@@ -168,14 +169,14 @@ class FastApi:
         data ={
             "agent_config": agent_conf
         }
-        print(agent_conf)
+        logger.info(agent_conf)
         return await self._request("POST", '/v1/agent/create', data=data)
 
     async def gpt_register_tool(self, gpt_id: str):
         data ={
             "tools_config": {
                 "gpt_id": gpt_id,
-                "host": "http://43.134.24.146:18000",
+                "host": os.getenv("SELF_HOST"),
                 "openapi_config": {"openapi":"3.1.0","info":{"title":"API Service","version":"0.1.0"},"paths":{"/api/v1/tool/browser_action_nlp":{"post":{"tags":["Tool"],"summary":"Browser Action Nlp","description":"Process natural language browser action descriptions\n\nThis endpoint receives natural language browser operation instructions \nand forwards them to the corresponding monitoring agent.\n\nParameters:\n    request: BrowserActionNlpRequest\n        - context: Context information\n            - gpt_id: GPT model ID\n            - user_id: User ID\n        - content: Natural language description of browser action\n\nReturns:\n    BrowserActionNlpResponse:\n        - status: Execution status (success/error)\n        - message: Execution message with operation details\n\nExample:\n    Request:\n        POST /api/v1/tool/browser_action_nlp\n        {\n            \"context\": {\n                \"gpt_id\": \"67ab0c86880303187f65d3a8\",\n                \"user_id\": \"user_123\"\n            },\n            \"content\": \"Click the login button on the page\"\n        }\n\n    Success Response:\n        {\n            \"status\": \"success\",\n            \"message\": \"start action: Click the login button on the page\"\n        }\n\n    Error Response:\n        {\n            \"detail\": \"Monitor Agent not found\"\n        }\n\nNotes:\n    - Ensure monitoring agent is registered before calling\n    - Natural language description should be clear and specific\n    - Valid GPT ID and user ID are required","operationId":"browser_action_nlp_api_v1_tool_browser_action_nlp_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/BrowserActionNlpRequest"}}},"required":True},"responses":{"200":{"description":"Successfully processed browser action","content":{"application/json":{"schema":{"$ref":"#/components/schemas/BrowserActionNlpResponse"},"example":{"status":"success","message":"start action: Click the login button on the page"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}}},"components":{"schemas":{"BrowserActionNlpRequest":{"properties":{"context":{"$ref":"#/components/schemas/ContextRequest","description":"Context information"},"content":{"type":"string","minLength":1,"title":"Content","description":"Natural language description of browser action","example":"Click the login button on the page"}},"type":"object","required":["context","content"],"title":"BrowserActionNlpRequest","description":"Request model for browser action natural language processing"},"BrowserActionNlpResponse":{"properties":{"status":{"type":"string","enum":["success","error"],"title":"Status","description":"执行状态","example":"success"},"message":{"type":"string","title":"Message","description":"执行消息","example":"start action: 点击页面上的登录按钮"}},"type":"object","required":["status","message"],"title":"BrowserActionNlpResponse","description":"浏览器动作执行响应"},"ContextRequest":{"properties":{"gpt_id":{"type":"string","title":"Gpt Id"},"user_id":{"type":"string","title":"User Id","description":"user id"}},"type":"object","required":["user_id"],"title":"ContextRequest"},"HTTPValidationError":{"properties":{"detail":{"items":{"$ref":"#/components/schemas/ValidationError"},"type":"array","title":"Detail"}},"type":"object","title":"HTTPValidationError"},"ValidationError":{"properties":{"loc":{"items":{"anyOf":[{"type":"string"},{"type":"integer"}]},"type":"array","title":"Location"},"msg":{"type":"string","title":"Message"},"type":{"type":"string","title":"Error Type"}},"type":"object","required":["loc","msg","type"],"title":"ValidationError"}}}}
             }
         }
@@ -194,59 +195,3 @@ class FastApi:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit point"""
         await self.close()
-
-
-async def main():
-    # gpt_id = "67acc197140b250260ff8b68"
-
-
-    agent_configs=[
-        {
-            "name": "crypto_researcher_agent",
-            "description": "Conduct research and analysis if necessary. Can be called multiple times.",
-            "system_message": "### Role Description\nYou are a researcher based on the user's instruction to generate a research report. Only proceed when delegated.\n### Workflow\n1. Understand the user instruction，build the request by the request schema of the tool if using the tool \n2. Conduct research by listing the data you get\n3. Generate the research report\n### Input\n* user instruction\n### Output\n1. On top, tell me your execution plan\n2. Pass your report to the next agent",
-            "model": "qwen-max",
-            "tools": [ "tsdb_query"]
-        },
-        # {
-        #     "name": "crypto_analyst_agent",
-        #     "description": "Gather the result from the previous agent, answer the question from the user instruction.",
-        #     "system_message": "### Role Description\nYour goal is to provide clear, accurate, and easy-to-understand answers to user inquiries, drawing upon the information provided in the research report.\n### Workflow\n1. Receive the result from the previous agent\n2. Receive the user's question or instruction (user_instruction).\n3. Acknowledge the user's question by restating it to ensure you understand their needs.\n4. Based on the research report, craft a detailed and helpful answer for the user.\n5. Present the answer in a polite, conversational, and easy-to-understand tone, as if engaging in a one-on-one conversation.\n### Input\n* result from the previous agent\n* user_instruction: The user's question or request.\n### Output\nYour reply should follow this format to ensure clarity and a positive user experience:\n* **[Confirmation]:** Begin by restating the user's question or request to confirm your understanding. For example: \"Thank you for your question! I understand you'd like to know...\"\n* **[Answer]:** Provide a direct and concise answer to the user's question, based on the research report.\n* **[Explanation]:** Elaborate on your answer, providing context, reasoning, and any relevant details from the research report. Mention any specific tools, approaches, or methodologies used in the research that support your answer. The goal is to make the answer as clear and helpful as possible.\n* **[Closing]:** End with a polite closing, such as: \"I hope this helps! Please let me know if you have any further questions.\" or \"We're here to assist you further if needed.\"\n\nIf there contains a list of items, Return as a table list in Markdown format.",
-        #     "model": "qwen-max"
-        # },
-        # {
-        #     "name": "crypto_execution_agent",
-        #     "description": "You are an agent of a crypto transaction execution tool. You do not execute transactions proactively. You only initiate a transaction when the previous agent explicitly provides a crypto transaction execution action for the user or when the user's input contains an explicit and executable transaction instruction.",
-        #     "system_message": "### Role Description\nYou are a professional trading agent who calls action tools. You are idle unless you are required to work by user instruction.\n### Workflow\n1. Build the request by the request schema of the tool and execution action by user-provided action trade nlp\n2. Call the tool\n3. Wait for the operation result\n### Input\n* nlp from the user\n### Output\n* action result and format as the response schema of the tool\n* reply including:\nTrade Execution Parameters:\n- Token: SEXCOIN (highest percentage increase)\n- Platform: gmgn.ai (Solana blockchain)\n- Purchase Amount: 0.01 share\n- Current Token Details:\n* Price: Approximately $0.00 (micro-price range)\n* 24h Volume: $182.7K\n* Price Increase: +3,200%",
-        #     "model": "qwen-max",
-        #     "tools": ["browser_action_nlp"],
-        # }
-    ]
-
-    fastapi = FastApi()
-    # gpt_id = await fastapi.create_gpt()
-    # print("gpt_id", gpt_id)
-    # gpt_user_id = await fastapi.create_gpt_user()
-    # print(gpt_user_id)
-    gpt_id = '67b036473feaa412f79ead94'
-    gpt_user_id = '67b0733ab80b8cbfc76faf4b'
-    # register_result = await fastapi.gpt_register_tool(gpt_id)
-    # print("register_result", register_result)
-    for c in agent_configs:
-        result = await fastapi.create_agent(agent_conf =c, gpt_id=gpt_id)
-        print(result)
-
-    # content = "user message: how tokens with marketcap more than $60M,dataframe:67b075dcfd0ea001a3b748f3,user_id:67b0733ab80b8cbfc76faf4b\n response format: if output contain table list, return markdown format"
-    # agent_ids = ["67b196403b306b213a6d1cc0", "67b036633feaa412f79ead9a"]
-    # chat_result = await fastapi.get_chat_response(user_id=gpt_user_id,content=content,gpt_id=gpt_id, agent_ids=agent_ids)
-    # print(chat_result)
-    # for c in agent_configs:
-    #     result = await fastapi.create_agent(agent_conf=c, gpt_id=gpt_id)
-    #     print(result)
-    agent_id = '67b176a29bb146c2d80533b9'
-    delete_result = await fastapi.delete_agent(gpt_id, agent_id)
-    print("delete_result", delete_result)
-
-
-if __name__ == '__main__':
-    asyncio.run(main())

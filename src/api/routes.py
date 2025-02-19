@@ -1,30 +1,24 @@
-import datetime
-
-from aiohttp import ClientRequest
-from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, schema_json_of, Field
-from typing import List, Dict, Any, Optional, AsyncGenerator
-from langchain_core.messages import BaseMessage
-from sse_starlette.sse import EventSourceResponse
 import asyncio
 import json
 import pydash
-
-from browser_use.agent.prompts import SystemPrompt
-from src.api.services.action_agent_service import ActionAgentService, ActionAgentManager, ActionAgentConfig
-from langchain_openai import ChatOpenAI  # 或其他您使用的LLM
-from browser_use.browser.views import BrowserState, BrowserStateHistory, TabInfo
-from langchain_core.messages import HumanMessage, SystemMessage
-from src.api.services.monitor_service import MonitorService, BrowserPluginMonitorAgent
-from src.api.proxy.fastapi import FastApi
-from browser_use.agent.views import (
-    AgentOutput, ActionResult
-)
 import logging
 
+
+from fastapi import APIRouter, HTTPException, Request
+from sse_starlette.sse import EventSourceResponse
+
+from src.action.action_agent_manger.server import ActionAgentManager
+from src.action.models import ActionAgentConfig
+from src.monitor.model import BrowserPluginMonitorAgent
+from src.monitor.server import MonitorService
+from src.proxy.fastapi import FastApi
+from src.api.model import ActionResultRequest, ActionRequest, CheckTradeActionRequest, CheckTargetPageRequest, BrowserActionNlpRequest, BrowserActionNlpResponse, ChatMessage, AgentRegisterRequest
+from src.action.models import CheckTradeAction, IsTargetPage
+from src.prompt import CHECK_TRADE_ACTION, CHECK_TARGET_PAGE
+from src.utils.llm import call_llm
+from src.const import GPT_ID, ANALYZE_AGENT_ID, EXECUTION_AGENT_ID, RESEARCH_AGENT_ID
+
 logger = logging.getLogger(__name__)
-
-
 router = APIRouter(include_in_schema=False)
 public_router = APIRouter(
     tags=["Tool"]  # 设置 API 分组标签为 Tool
@@ -34,188 +28,6 @@ monitor_service = MonitorService()
 fastapi = FastApi()
 
 action_agent_manager = ActionAgentManager()
-
-
-class ActionRequest(BaseModel):
-    """
-    请求下一步动作的数据结构
-    """
-    dom_tree: dict = Field(
-        ...,
-        description="DOM树结构",
-        example={
-            "tag": "html",
-            "children": [
-                {"tag": "body", "children": []}
-            ]
-        }
-    )
-    task: str = Field(
-        ...,
-        description="要执行的任务描述",
-        example="Navigate to the login page"
-    )
-    url: str = Field(
-        ...,
-        description="当前页面的URL",
-        example="https://example.com"
-    )
-    title: str = Field(
-        ...,
-        description="当前页面的标题",
-        example="Example Page"
-    )
-    tabs: List[TabInfo] = Field(
-        ...,
-        description="浏览器标签页列表"
-    )
-    chat_request_id: str
-
-
-
-class ContextRequest(BaseModel):
-    gpt_id: str = Field(
-        ...,
-        description="gpt id",
-    ),
-    user_id: str = Field(
-        ...,
-        description="user id"
-    )
-
-
-class BrowserActionNlpRequest(BaseModel):
-    """
-    Request model for browser action natural language processing
-    """
-    context: ContextRequest = Field(
-        ...,
-        description="Context information",
-    )
-    content: str = Field(
-        ...,
-        description="Natural language description of browser action",
-        example="Click the login button on the page",
-        min_length=1
-    )
-
-class BrowserActionNlpResponse(BaseModel):
-    """
-    浏览器动作执行响应
-    """
-    status: str = Field(
-        description="执行状态",
-        example="success",
-        enum=["success", "error"]  # 限制可能的状态值
-    )
-    message: str = Field(
-        description="执行消息",
-        example="start action: 点击页面上的登录按钮"
-    )
-
-class ChatMessage(BaseModel):
-    """
-    Chat message data structure
-    """
-    co_instance_id: str = Field(
-        ...,
-        description="Browser instance unique identifier",
-        example="39879879878979",
-        min_length=1
-    )
-    content: str = Field(
-        ...,
-        description="Chat content",
-        example="Hello, please help me open example.com",
-        min_length=1
-    )
-    dataframe: List[dict] = Field(
-        ...,
-        description="Webpages dataframe data"
-    )
-
-class ChatResponse(BaseModel):
-    """
-    聊天响应的数据结构
-    """
-    content: str = Field(
-        description="响应内容",
-        example="OK, I'll help you open the webpage"
-    )
-    timestamp: float = Field(
-        description="响应时间戳",
-        example=1706443496.789
-    )
-    status: str = Field(
-        description="响应状态",
-        example="success",
-        enum=["success", "error", "processing"]
-    )
-
-
-class CheckTargetPageRequest(BaseModel):
-    current_page_url: str
-
-class PlanRequest(BaseModel):
-    llm: str
-
-class AgentRegisterRequest(BaseModel):
-    agent_id: str
-
-class Step(BaseModel):
-    step_on: int
-    step_llm: str
-
-class Steps(BaseModel):
-    steps: List[Step]
-
-class IsTargetPage(BaseModel):
-    result: bool
-
-class CheckAgent(BaseModel):
-    use_agent: bool
-
-class ActionResultRequest(BaseModel):
-    chat_request_id: str
-    result: ActionResult
-
-class CheckTradeActionRequest(BaseModel):
-    """
-    检查交易动作的请求结构
-    """
-    nlp: str = Field(
-        ...,
-        description="自然语言描述的交易动作",
-        example="Buy 0.1 BTC at market price"
-    )
-
-class CheckTradeAction(BaseModel):
-    """
-    交易动作检查的响应结构
-    """
-    is_trade_action: bool = Field(
-        ...,
-        description="是否是交易动作"
-    )
-    action: str = Field(
-        ...,
-        description="交易类型（买/卖）",
-        example="buy"
-    )
-    coin_name: str = Field(
-        ...,
-        description="交易的币种名称",
-        example="BTC"
-    )
-    amount: float = Field(
-        ...,
-        description="交易数量",
-        example=0.1
-    )
-
-class GetDataframe(BaseModel):
-    dataframe: dict
-
 
 
 @router.post("/action/result")
@@ -299,28 +111,11 @@ async def check_trade_action(request: CheckTradeActionRequest):
         }
     """
     try:
-        llm = ChatOpenAI(model_name="gpt-4o")
-        plan_message = """
-            You are a precise browser automation agent that interacts with websites through structured commands. Your role is to:
-        1. Analyze the provided NLP action
-        2. Determine if the behavior described by the NLP is trading cryptocurrencies. For example, it should be a description of the sale, the crypto coins bought and sold, and the number of coins bought and sold
-        3. Respond with valid JSON containing the result of determine
-
-        INPUT STRUCTURE:
-        NLP: the provided action description 
-
-        RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format: 
-        {"is_trade_action": true, "action":"buy", "coin_name":"trump", "amount":0.01}
-            """
-        system_message = SystemMessage(content=plan_message)
-        human_message = HumanMessage(content=f"""
-            NLP: {request.nlp}
-            """)
-
-        msg = [system_message, human_message]
-
-        structured_llm = llm.with_structured_output(schema=CheckTradeAction, include_raw=True, method="function_calling")
-        result = await structured_llm.ainvoke(msg)
+        result = await call_llm(
+            system_content=CHECK_TRADE_ACTION,
+            human_content=f"""\n NLP: {request.nlp} \n""",
+            schema=CheckTradeAction
+        )
         return result
     except Exception as e:
         logger.error("check trade action", e)
@@ -329,28 +124,11 @@ async def check_trade_action(request: CheckTradeActionRequest):
 @router.post("/check_target_page")
 async def check_target_page(request: CheckTargetPageRequest):
     try:
-        llm = ChatOpenAI(model_name="gpt-4o")
-        plan_message = """
-            You are a precise browser automation agent that interacts with websites through structured commands. Your role is to:
-        1. Analyze the provided webpage url
-        2. Determine if you are already on the target page https://gmgn.ai
-        3. Respond with valid JSON containing the result of determine
-
-        INPUT STRUCTURE:
-        Current URL: The webpage you're currently on 
-
-        RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format: 
-        {"result": true}
-            """
-        system_message = SystemMessage(content=plan_message)
-        human_message = HumanMessage(content=f"""
-            Current url: {request.current_page_url}
-            """)
-
-        msg = [system_message, human_message]
-
-        structured_llm = llm.with_structured_output(schema=IsTargetPage, include_raw=True, method="function_calling")
-        result = await structured_llm.ainvoke(msg)
+        result = await call_llm(
+            system_content=CHECK_TARGET_PAGE,
+            human_content=f"""\n Current url: {request.current_page_url}""",
+            schema=IsTargetPage
+        )
         return result
     except Exception as e:
         logger.error("check target page", e)
@@ -364,9 +142,9 @@ async def register_agent(request: AgentRegisterRequest):
     if agent_id in monitor_service.agents:
         logger.info("agent already register")
         return
-    create_gpt_result = await fastapi.create_gpt_user()
-    user_id =create_gpt_result.data["user_id"]
-    # user_id = '67ac39d50cef4ea4cf0df45b'
+    # create_gpt_result = await fastapi.create_gpt_user()
+    # user_id =create_gpt_result.data["user_id"]
+    user_id = '67ac39d50cef4ea4cf0df45b'
     monitor_agent = BrowserPluginMonitorAgent(browser_plugin_id=agent_id, gpt_user_id=user_id)
     monitor_service.register_agent(agent_id, monitor_agent)
     return {"user_id": user_id}
@@ -470,7 +248,7 @@ async def chat(request: ChatMessage):
         # 设置超时时间为60分钟
         timeout = 3600  # 秒
         async with asyncio.timeout(timeout):  # 使用 asyncio.timeout 上下文管理器
-            gpt_id = '67b036473feaa412f79ead94'
+            gpt_id = GPT_ID
 
             co_instance_id = request.co_instance_id
             if co_instance_id not in monitor_service.get_agents():
@@ -485,9 +263,9 @@ async def chat(request: ChatMessage):
             
             check_trade_action_content = CheckTradeActionRequest(nlp=request.content)
             check_result = await check_trade_action(check_trade_action_content)
-            agent_ids = ["67b04bee9b9a465aee960826"]
+            agent_ids = [EXECUTION_AGENT_ID]
             if not check_result["parsed"].is_trade_action:
-                agent_ids = ["67b196403b306b213a6d1cc0", "67b036633feaa412f79ead9a"]
+                agent_ids = [RESEARCH_AGENT_ID, ANALYZE_AGENT_ID]
                 content += '\n response format: if output contain table list, return markdown format'
             # 在调用 get_chat_response 时传入超时参数
             response = await fastapi.get_chat_response(
@@ -496,6 +274,11 @@ async def chat(request: ChatMessage):
                 gpt_id, 
                 agent_ids=agent_ids
             )
+            if not response.success:
+                raise HTTPException(
+                    status_code=500,
+                    detail=response.error
+                )
             response_content = pydash.get(response.data, 'content')
             if check_result["parsed"].is_trade_action:
                 response_content = ''
@@ -507,17 +290,9 @@ async def chat(request: ChatMessage):
             detail=f"Request timed out after {timeout} seconds"
         )
     except Exception as e:
-        logger.error("chat", e)
+        logger.error(f"Exception: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to process chat message: {str(e)}"
         )
-
-
-
-if __name__ == '__main__':
-    pass
-    # res = asyncio.run(check_agent("when should buy BTC?"))
-    # print(res['parsed'].use_agent)
-
 
