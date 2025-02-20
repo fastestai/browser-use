@@ -21,9 +21,9 @@ dependencies = [
     # "lmnr[langchain]>=0.4.59",
     "markdownify==0.14.1",
     "langchain-core>=0.3.35",
-    "uvicorn==0.34.0",
-    "fastapi==0.115.8",
-    "pydash>=8.0.5"
+    # "lmnr[langchain]>=0.4.59",
+    "markdownify==0.14.1",
+    "langchain-core>=0.3.35"
 ]
 
 [project.optional-dependencies]
