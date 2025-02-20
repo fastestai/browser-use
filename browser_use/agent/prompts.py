@@ -149,12 +149,6 @@ Remember: Your responses must be valid JSON matching the specified format. Each 
 		return SystemMessage(content=AGENT_PROMPT)
 
 
-# Example:
-# {self.example_response()}
-# Your AVAILABLE ACTIONS:
-# {self.default_action_description}
-
-
 class AgentMessagePrompt:
 	def __init__(
 		self,

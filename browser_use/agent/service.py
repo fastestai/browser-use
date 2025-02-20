@@ -283,6 +283,8 @@ class Agent(Generic[Context]):
 		model_output = None
 		result: list[ActionResult] = []
 
+		print("step info",step_info)
+
 		try:
 			state = await self.browser_context.get_state()
 
@@ -444,6 +446,7 @@ class Agent(Generic[Context]):
 			response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
 			parsed: AgentOutput | None = response['parsed']
 		else:
+			print('entering')
 			structured_llm = self.llm.with_structured_output(self.AgentOutput, include_raw=True, method=self.tool_calling_method)
 			response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
 			parsed: AgentOutput | None = response['parsed']
