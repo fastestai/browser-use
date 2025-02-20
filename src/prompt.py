@@ -22,7 +22,7 @@ CHECK_TRADE_ACTION = """
             NLP: the provided action description 
             
             RESPONSE FORMAT: You must ALWAYS respond with valid JSON in this exact format: 
-            {"is_trade_action": true, "action":"buy", "coin_name":"trump", "amount":0.01, "unit":"SOL"}
+            {"is_trade_action": true, "action":"buy", "coin_name":"trump", "amount":0.01}
             
             Here's how the improved prompt addresses the issue and some additional considerations:
             
