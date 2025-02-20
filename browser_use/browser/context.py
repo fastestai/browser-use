@@ -1040,6 +1040,7 @@ class BrowserContext:
 			tab_info = TabInfo(page_id=page_id, url=page.url, title=await page.title())
 			tabs_info.append(tab_info)
 
+		print("tabs", tab_info)
 		return tabs_info
 
 	async def switch_to_tab(self, page_id: int) -> None:
