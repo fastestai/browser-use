@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, Generic, List, Optional, Type, TypeVar
 
@@ -31,6 +32,7 @@ from browser_use.agent.views import (
 	AgentSettings,
 	AgentState,
 	AgentStepInfo,
+	StepMetadata,
 	ToolCallingMethod,
 )
 from browser_use.browser.browser import Browser
@@ -48,7 +50,7 @@ from browser_use.telemetry.views import (
 	AgentRunTelemetryEvent,
 	AgentStepTelemetryEvent,
 )
-from browser_use.utils import time_execution_async
+from browser_use.utils import time_execution_async, time_execution_sync
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -63,7 +65,7 @@ def log_response(response: AgentOutput) -> None:
 		emoji = '⚠'
 	else:
 		emoji = '🤷'
-	logger.debug(f'🤖 {emoji} Page summary: {response.current_state.page_summary}')
+
 	logger.info(f'{emoji} Eval: {response.current_state.evaluation_previous_goal}')
 	logger.info(f'🧠 Memory: {response.current_state.memory}')
 	logger.info(f'🎯 Next goal: {response.current_state.next_goal}')
@@ -75,6 +77,7 @@ Context = TypeVar('Context')
 
 
 class Agent(Generic[Context]):
+	@time_execution_sync('--init (agent)')
 	def __init__(
 		self,
 		task: str,
@@ -125,6 +128,15 @@ class Agent(Generic[Context]):
 		#
 		context: Context | None = None,
 	):
+		if page_extraction_llm is None:
+			page_extraction_llm = llm
+
+		# Core components
+		self.task = task
+		self.llm = llm
+		self.controller = controller
+		self.sensitive_data = sensitive_data
+
 		self.settings = AgentSettings(
 			use_vision=use_vision,
 			use_vision_for_planner=use_vision_for_planner,
@@ -146,14 +158,32 @@ class Agent(Generic[Context]):
 			planner_interval=planner_interval,
 		)
 
+		# Action setup
+		self._setup_action_models()
+		self._set_browser_use_version_and_source()
+		self.initial_actions = self._convert_initial_actions(initial_actions) if initial_actions else None
+
+		# Model setup
+		self._set_model_names()
+		self.tool_calling_method = self.set_tool_calling_method(self.settings.tool_calling_method)
+
 		# Initialize state
 		self.state = injected_agent_state or AgentState()
+
+		# for models without tool calling, add available actions to context
+		available_actions = controller.registry.get_prompt_description()
+		if self.model_name == 'deepseek-reasoner' or self.model_name.startswith('deepseek-r1'):
+			# add to context that we are using deepseek
+			if message_context:
+				message_context += f'\n\nAvailable actions: {available_actions}'
+			else:
+				message_context = f'Available actions: {available_actions}'
 
 		# Initialize message manager with state
 		self._message_manager = MessageManager(
 			task=task,
 			system_message=self.settings.system_prompt_class(
-				controller.registry.get_prompt_description(),
+				available_actions,
 				max_actions_per_step=self.settings.max_actions_per_step,
 			).get_system_message(),
 			settings=MessageManagerSettings(
@@ -165,12 +195,6 @@ class Agent(Generic[Context]):
 			),
 			state=self.state.message_manager_state,
 		)
-
-		# Core components
-		self.task = task
-		self.llm = llm
-		self.controller = controller
-		self.sensitive_data = sensitive_data
 
 		# Browser setup
 		self.injected_browser = browser is not None
@@ -188,15 +212,6 @@ class Agent(Generic[Context]):
 		self.register_new_step_callback = register_new_step_callback
 		self.register_done_callback = register_done_callback
 		self.register_external_agent_status_raise_error_callback = register_external_agent_status_raise_error_callback
-
-		# Action setup
-		self._setup_action_models()
-		self._set_browser_use_version_and_source()
-		self.initial_actions = self._convert_initial_actions(initial_actions) if initial_actions else None
-
-		# Model setup
-		self._set_model_names()
-		self.tool_calling_method = self.set_tool_calling_method(self.settings.tool_calling_method)
 
 		# Context
 		self.context = context
@@ -281,13 +296,14 @@ class Agent(Generic[Context]):
 			raise InterruptedError
 
 	# @observe(name='agent.step', ignore_output=True, ignore_input=True)
-	@time_execution_async('--step')
+	@time_execution_async('--step (agent)')
 	async def step(self, step_info: Optional[AgentStepInfo] = None) -> None:
 		"""Execute one step of the task"""
 		logger.info(f'📍 Step {self.state.n_steps}')
 		state = None
 		model_output = None
 		result: list[ActionResult] = []
+		step_start_time = time.time()
 
 		try:
 			state = await self.browser_context.get_state()
@@ -348,6 +364,7 @@ class Agent(Generic[Context]):
 			self.state.last_result = result
 
 		finally:
+			step_end_time = time.time()
 			actions = [a.model_dump(exclude_unset=True) for a in model_output.action] if model_output else []
 			self.telemetry.capture(
 				AgentStepTelemetryEvent(
@@ -362,8 +379,15 @@ class Agent(Generic[Context]):
 				return
 
 			if state:
-				self._make_history_item(model_output, state, result)
+				metadata = StepMetadata(
+					step_number=self.state.n_steps,
+					step_start_time=step_start_time,
+					step_end_time=step_end_time,
+					input_tokens=self._message_manager.state.history.current_tokens,
+				)
+				self._make_history_item(model_output, state, result, metadata)
 
+	@time_execution_async('--handle_step_error (agent)')
 	async def _handle_step_error(self, error: Exception) -> list[ActionResult]:
 		"""Handle all types of errors that can occur during a step"""
 		include_trace = logger.isEnabledFor(logging.DEBUG)
@@ -403,6 +427,7 @@ class Agent(Generic[Context]):
 		model_output: AgentOutput | None,
 		state: BrowserState,
 		result: list[ActionResult],
+		metadata: Optional[StepMetadata] = None,
 	) -> None:
 		"""Create and store history item"""
 
@@ -419,7 +444,7 @@ class Agent(Generic[Context]):
 			screenshot=state.screenshot,
 		)
 
-		history_item = AgentHistory(model_output=model_output, result=result, state=state_history)
+		history_item = AgentHistory(model_output=model_output, result=result, state=state_history, metadata=metadata)
 
 		self.state.history.history.append(history_item)
 
@@ -429,7 +454,7 @@ class Agent(Generic[Context]):
 		"""Remove think tags from text"""
 		return re.sub(self.THINK_TAGS, '', text)
 
-	@time_execution_async('--get_next_action')
+	@time_execution_async('--get_next_action (agent)')
 	async def get_next_action(self, input_messages: list[BaseMessage]) -> AgentOutput:
 		"""Get next action from LLM based on current state"""
 		if self.model_name == 'deepseek-reasoner' or self.model_name.startswith('deepseek-r1'):
@@ -502,6 +527,7 @@ class Agent(Generic[Context]):
 		return False, False
 
 	# @observe(name='agent.run', ignore_output=True)
+	@time_execution_async('--run (agent)')
 	async def run(self, max_steps: int = 100) -> AgentHistoryList:
 		"""Execute the task with maximum number of steps"""
 		try:
@@ -568,7 +594,7 @@ class Agent(Generic[Context]):
 				create_history_gif(task=self.task, history=self.state.history, output_path=output_path)
 
 	# @observe(name='controller.multi_act')
-	@time_execution_async('--multi-act')
+	@time_execution_async('--multi-act (agent)')
 	async def multi_act(
 		self,
 		actions: list[ActionModel],

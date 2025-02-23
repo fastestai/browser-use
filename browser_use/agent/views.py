@@ -93,10 +93,23 @@ class ActionResult(BaseModel):
 	include_in_memory: bool = False  # whether to include in past messages as context or not
 
 
+class StepMetadata(BaseModel):
+	"""Metadata for a single step including timing and token information"""
+
+	step_start_time: float
+	step_end_time: float
+	input_tokens: int  # Approximate tokens from message manager for this step
+	step_number: int
+
+	@property
+	def duration_seconds(self) -> float:
+		"""Calculate step duration in seconds"""
+		return self.step_end_time - self.step_start_time
+
+
 class AgentBrain(BaseModel):
 	"""Current state of the agent"""
 
-	page_summary: str
 	evaluation_previous_goal: str
 	memory: str
 	next_goal: str
@@ -136,6 +149,7 @@ class AgentHistory(BaseModel):
 	model_output: AgentOutput | None
 	result: list[ActionResult]
 	state: BrowserStateHistory
+	metadata: Optional[StepMetadata] = None
 
 	model_config = ConfigDict(arbitrary_types_allowed=True, protected_namespaces=())
 
@@ -167,6 +181,7 @@ class AgentHistory(BaseModel):
 			'model_output': model_output_dump,
 			'result': [r.model_dump(exclude_none=True) for r in self.result],
 			'state': self.state.to_dict(),
+			'metadata': self.metadata.model_dump() if self.metadata else None,
 		}
 
 
@@ -174,6 +189,30 @@ class AgentHistoryList(BaseModel):
 	"""List of agent history items"""
 
 	history: list[AgentHistory]
+
+	def total_duration_seconds(self) -> float:
+		"""Get total duration of all steps in seconds"""
+		total = 0.0
+		for h in self.history:
+			if h.metadata:
+				total += h.metadata.duration_seconds
+		return total
+
+	def total_input_tokens(self) -> int:
+		"""
+		Get total tokens used across all steps.
+		Note: These are from the approximate token counting of the message manager.
+		For accurate token counting, use tools like LangChain Smith or OpenAI's token counters.
+		"""
+		total = 0
+		for h in self.history:
+			if h.metadata:
+				total += h.metadata.input_tokens
+		return total
+
+	def input_token_usage(self) -> list[int]:
+		"""Get token usage for each step"""
+		return [h.metadata.input_tokens for h in self.history if h.metadata]
 
 	def __str__(self) -> str:
 		"""Representation of the AgentHistoryList object"""
@@ -222,11 +261,14 @@ class AgentHistoryList(BaseModel):
 			return self.history[-1].model_output.action[-1].model_dump(exclude_none=True)
 		return None
 
-	def errors(self) -> list[str]:
-		"""Get all errors from history"""
+	def errors(self) -> list[str | None]:
+		"""Get all errors from history, with None for steps without errors"""
 		errors = []
 		for h in self.history:
-			errors.extend([r.error for r in h.result if r.error])
+			step_errors = [r.error for r in h.result if r.error]
+
+			# each step can have only one error
+			errors.append(step_errors[0] if step_errors else None)
 		return errors
 
 	def final_result(self) -> None | str:
@@ -242,8 +284,8 @@ class AgentHistoryList(BaseModel):
 		return False
 
 	def has_errors(self) -> bool:
-		"""Check if the agent has any errors"""
-		return len(self.errors()) > 0
+		"""Check if the agent has any non-None errors"""
+		return any(error is not None for error in self.errors())
 
 	def urls(self) -> list[str]:
 		"""Get all unique URLs from history"""
@@ -306,6 +348,10 @@ class AgentHistoryList(BaseModel):
 				if i == list(o.keys())[0]:
 					result.append(o)
 		return result
+
+	def number_of_steps(self) -> int:
+		"""Get the number of steps in the history"""
+		return len(self.history)
 
 
 class AgentError:
