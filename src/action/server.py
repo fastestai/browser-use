@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from browser_use.browser.views import BrowserState, TabInfo
 from browser_use.agent.message_manager.service import MessageManager
+from browser_use.agent.service import log_response
 from browser_use.agent.views import (
     AgentOutput, ActionResult, AgentSettings
 )
@@ -168,7 +169,7 @@ class ActionAgentService:
         response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
         parsed: AgentOutput | None = response['parsed']
         logger.info(f"Received parsed data: {parsed}")
-        self.log_response(parsed)
+        log_response(parsed)
         return response
 
     async def set_action_result(self, result: ActionResult):
