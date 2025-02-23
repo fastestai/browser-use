@@ -5,7 +5,7 @@ from typing import List, Optional
 from browser_use.browser.views import BrowserState, TabInfo
 from browser_use.agent.message_manager.service import MessageManager
 from browser_use.agent.views import (
-    AgentOutput, ActionResult
+    AgentOutput, ActionResult, AgentSettings
 )
 from browser_use.controller.service import Controller
 from browser_use.dom.history_tree_processor.view import Coordinates
@@ -29,12 +29,14 @@ class ActionAgentService:
         self.llm = llm
         self.task = task
         self.controller = controller
+        self.settings = AgentSettings()
         # 初始化可能需要的配置
         self.message_manager = MessageManager(
-            llm=llm,
             task=task,
-            action_descriptions=self.controller.registry.get_prompt_description(),
-            system_prompt_class=MySystemPrompt,
+            system_message=self.settings.system_prompt_class(
+				controller.registry.get_prompt_description(),
+				max_actions_per_step=self.settings.max_actions_per_step,
+			).get_system_message()
         )
         self.tool_calling_method = 'function_calling'
         self._setup_action_models()
