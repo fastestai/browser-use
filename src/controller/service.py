@@ -186,10 +186,10 @@ class Controller(Generic[Context]):
 				logger.info(msg)
 				return ActionResult(extracted_content=msg)
 
-		# @self.registry.action(
-		# 	'Scroll down the page by pixel amount - if no amount is specified, scroll down one page',
-		# 	param_model=ScrollAction,
-		# )
+		@self.registry.action(
+			'Scroll down the page by pixel amount - if no amount is specified, scroll down one page',
+			param_model=ScrollAction,
+		)
 		async def scroll_down(params: ScrollAction, browser: BrowserContext):
 			page = await browser.get_current_page()
 			if params.amount is not None:
