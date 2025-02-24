@@ -292,16 +292,16 @@ async def chat(request: ChatMessage):
             #     agent_ids=agent_ids
             # )
                 response = await fastapi.run_agent(agent_id=RESEARCH_AGENT_ID, task=content)
+                response_content = pydash.get(response.data, 'result')
+
+                if not response.success:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=response.error
+                    )
             else:
                 content = f'user message: {check_result["parsed"].action} {check_result["parsed"].amount} {check_result["parsed"].coin_name}'
                 await browser_plugin_instance.status_queue.put(content)
-            if not response.success:
-                raise HTTPException(
-                    status_code=500,
-                    detail=response.error
-                )
-            response_content = pydash.get(response.data, 'result')
-            if check_result["parsed"].is_trade_action:
                 response_content = ''
             return response_content
 
