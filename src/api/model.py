@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Any
 
 from browser_use.browser.views import TabInfo
 from browser_use.agent.views import (
@@ -8,12 +8,13 @@ from browser_use.agent.views import (
 
 
 class ActionRequest(BaseModel):
-    dom_tree: dict
-    task: str
-    url: str
-    title: str
-    tabs: List[TabInfo]
-    chat_request_id: str
+    compressed_data: Any
+    # dom_tree: dict
+    # task: str
+    # url: str
+    # title: str
+    # tabs: List[TabInfo]
+    # chat_request_id: str
 
 
 class ContextRequest(BaseModel):

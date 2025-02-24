@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Any, Type
 
 async def call_llm(system_content: str, human_content: str, schema: Type[BaseModel]) -> Any:
-    llm = ChatOpenAI(model_name="gpt-4o")
+    llm = ChatOpenAI(model_name="gpt-4o-mini")
     system_message = SystemMessage(content=system_content)
     human_message = HumanMessage(content=human_content)
     msg = [system_message, human_message]

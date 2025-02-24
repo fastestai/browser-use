@@ -3,6 +3,8 @@ import json
 import pydash
 import logging
 import time
+import base64
+import zlib
 
 
 from fastapi import APIRouter, HTTPException, Request
@@ -75,12 +77,21 @@ async def get_next_action(request: ActionRequest):
         500: 服务器内部错误
     """
     try:
+        # 如果数据是 base64 编码的（通常 pako 压缩后会进行 base64 编码）
+        decoded_data = base64.b64decode(request.compressed_data)
+
+        # 解压数据
+        # wbits=15+32 表示使用 zlib 格式并自动检测 gzip 头
+        decompressed_data = zlib.decompress(decoded_data, wbits=15 + 32)
+
+        # 将字节转换为字符串
+        result = decompressed_data.decode('utf-8')
+        json_res = json.loads(result)
         start_time = time.time()
-        logger.info(f"get next action start time: {start_time}")
-        chat_request_id = request.chat_request_id
-        action_agent_conf = ActionAgentConfig(task=request.task,llm=None)
+        chat_request_id = json_res["chat_request_id"]
+        action_agent_conf = ActionAgentConfig(task=json_res["task"],llm=None)
         action_agent = action_agent_manager.get_agent(chat_request_id, action_agent_conf)
-        model_output = await action_agent.get_next_actions(request.dom_tree, request.url, request.title, request.tabs)
+        model_output = await action_agent.get_next_actions(json_res["dom_tree"], json_res["url"], json_res["title"], json_res["tabs"])
         end_time = time.time()
         logger.info(f"get next action time: {end_time - start_time}")
         return model_output
@@ -273,21 +284,23 @@ async def chat(request: ChatMessage):
             if not check_result["parsed"].is_trade_action:
                 agent_ids = [RESEARCH_AGENT_ID, ANALYZE_AGENT_ID]
                 content += '\n response format: if output contain table list, return markdown format'
+            # 在调用 get_chat_response 时传入超时参数
+            # response = await fastapi.get_chat_response(
+            #     gpt_user_id,
+            #     content,
+            #     gpt_id,
+            #     agent_ids=agent_ids
+            # )
+                response = await fastapi.run_agent(agent_id=RESEARCH_AGENT_ID, task=content)
             else:
                 content = f'user message: {check_result["parsed"].action} {check_result["parsed"].amount} {check_result["parsed"].coin_name}'
-            # 在调用 get_chat_response 时传入超时参数
-            response = await fastapi.get_chat_response(
-                gpt_user_id, 
-                content, 
-                gpt_id, 
-                agent_ids=agent_ids
-            )
+                browser_plugin_instance.status_queue.put(content)
             if not response.success:
                 raise HTTPException(
                     status_code=500,
                     detail=response.error
                 )
-            response_content = pydash.get(response.data, 'content')
+            response_content = pydash.get(response.data, 'result')
             if check_result["parsed"].is_trade_action:
                 response_content = ''
             return response_content

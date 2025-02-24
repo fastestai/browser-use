@@ -182,6 +182,13 @@ class FastApi:
         }
         return await self._request("POST", '/v1/gpt/register_tools', data=data)
 
+    async def run_agent(self, agent_id: str, task: str):
+        data = {
+            "id": agent_id,
+            "task": task,
+        }
+        return await self._request("POST", '/v1/agent/run', data=data)
+
     async def close(self):
         """Close the session"""
         if self.session and not self.session.closed:
