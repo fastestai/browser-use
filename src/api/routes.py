@@ -294,7 +294,7 @@ async def chat(request: ChatMessage):
                 response = await fastapi.run_agent(agent_id=RESEARCH_AGENT_ID, task=content)
             else:
                 content = f'user message: {check_result["parsed"].action} {check_result["parsed"].amount} {check_result["parsed"].coin_name}'
-                browser_plugin_instance.status_queue.put(content)
+                await browser_plugin_instance.status_queue.put(content)
             if not response.success:
                 raise HTTPException(
                     status_code=500,
