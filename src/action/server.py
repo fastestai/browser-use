@@ -3,12 +3,13 @@ import logging
 from typing import List, Optional
 
 from browser_use.browser.views import BrowserState, TabInfo
-from browser_use.agent.message_manager.service import MessageManager
+from browser_use.agent.message_manager.service import MessageManager, MessageManagerSettings
 from browser_use.agent.service import log_response
 from browser_use.agent.views import (
-    AgentOutput, ActionResult, AgentSettings
+    AgentOutput, ActionResult, AgentSettings, AgentState,
 )
-from browser_use.controller.service import Controller
+from browser_use.agent.prompts import SystemPrompt
+from src.controller.service import Controller
 from browser_use.dom.history_tree_processor.view import Coordinates
 from browser_use.dom.views import (
 	CoordinateSet,
@@ -26,18 +27,30 @@ logger = logging.getLogger(__name__)
 
 
 class ActionAgentService:
-    def __init__(self, task, llm, controller=Controller()):
+    def __init__(self, task, llm, controller=Controller(), override_system_message = None, extend_system_message = None, sensitive_data = None):
         self.llm = llm
         self.task = task
         self.controller = controller
         self.settings = AgentSettings()
+        self.available_actions = self.controller.registry.get_prompt_description()
+        self.state = AgentState()
         # 初始化可能需要的配置
         self.message_manager = MessageManager(
             task=task,
-            system_message=self.settings.system_prompt_class(
-				controller.registry.get_prompt_description(),
-				max_actions_per_step=self.settings.max_actions_per_step,
-			).get_system_message()
+            system_message=SystemPrompt(
+                action_description=self.available_actions,
+                max_actions_per_step=self.settings.max_actions_per_step,
+                override_system_message=override_system_message,
+                extend_system_message=extend_system_message,
+            ).get_system_message(),
+            settings=MessageManagerSettings(
+                max_input_tokens=self.settings.max_input_tokens,
+                include_attributes=self.settings.include_attributes,
+                message_context=self.settings.message_context,
+                sensitive_data=sensitive_data,
+                available_file_paths=self.settings.available_file_paths,
+            ),
+            state=self.state.message_manager_state,
         )
         self.tool_calling_method = 'function_calling'
         self._setup_action_models()
