@@ -74,10 +74,14 @@ async def get_next_action(request: ActionRequest):
         500: 服务器内部错误
     """
     try:
+        start_time = time.time()
+        logger.info(f"get next action start time: {start_time}")
         chat_request_id = request.chat_request_id
         action_agent_conf = ActionAgentConfig(task=request.task,llm=None)
         action_agent = action_agent_manager.get_agent(chat_request_id, action_agent_conf)
         model_output = await action_agent.get_next_actions(request.dom_tree, request.url, request.title, request.tabs)
+        end_time = time.time()
+        logger.info(f"get next action time: {end_time - start_time}")
         return model_output
     except Exception as e:
         logger.error(f"action result err: {e}")
