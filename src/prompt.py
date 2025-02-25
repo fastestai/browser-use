@@ -39,3 +39,8 @@ CHECK_TRADE_ACTION = """
             ```json
             {"is_trade_action": true, "action":"buy", "coin_name":"trump", "amount":0.01, "unit":"SOL"}
         """
+
+EXTEND_SYSTEM_MESSAGE = """
+REMEMBER the most important RULE:
+Returns only one action at a time, preventing page changes
+"""
