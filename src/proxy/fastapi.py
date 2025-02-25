@@ -19,14 +19,14 @@ class ApiResponse(BaseModel):
 class FastApi:
     """External API service for making HTTP requests"""
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
         """
         Initialize the external API service
         
         Args:
             api_key: API key for authentication (if required)
         """
-        self.base_url = os.getenv('FASTEST_HOST')
+        self.base_url = base_url or os.getenv('FASTEST_HOST')
         self.api_key = api_key
         self.session: Optional[aiohttp.ClientSession] = None
         # 设置默认超时时间（秒）
