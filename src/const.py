@@ -1,15 +1,25 @@
 GPT_ID = '67b036473feaa412f79ead94'
-RESEARCH_AGENT_ID = '67bd34006cc6fc5c56f7d0ee'
+RESEARCH_AGENT_ID = '67bd850ee0e09541da363980'
+# RESEARCH_AGENT_ID = '67bd34006cc6fc5c56f7d0ee'
 ANALYZE_AGENT_ID = '67b036633feaa412f79ead9a'
 EXECUTION_AGENT_ID = '67b04bee9b9a465aee960826'
+
+# RESEARCH_AGENT_CONFIG =  {
+#             "name": "crypto_researcher_agent",
+#             "description": "Conduct research and analysis if necessary. Can be called multiple times.",
+#             "system_message": "### Role Description\nYou are a researcher based on the user's instruction to generate a research report. Only proceed when delegated.\n### Workflow\n1. Understand the user instruction，build the request by the request schema of the tool if using the tool \n2. Conduct research by listing the data you get\n3. Generate the research report\n### Input\n* user instruction\n### Output\n1. On top, tell me your execution plan\n2. Pass your report to the next agent",
+#             "model": "gpt-4o",
+#             "tools": [ "tsdb_query"]
+#         }
 
 RESEARCH_AGENT_CONFIG =  {
             "name": "crypto_researcher_agent",
             "description": "Conduct research and analysis if necessary. Can be called multiple times.",
-            "system_message": "### Role Description\nYou are a researcher based on the user's instruction to generate a research report. Only proceed when delegated.\n### Workflow\n1. Understand the user instruction，build the request by the request schema of the tool if using the tool \n2. Conduct research by listing the data you get\n3. Generate the research report\n### Input\n* user instruction\n### Output\n1. On top, tell me your execution plan\n2. Pass your report to the next agent",
+            "system_message": "Role Description\nYou are a researcher tasked with generating a research report based on user instructions. Proceed only when delegated.\nWorkflow\nUnderstand the user instruction and construct the request based on the tool's request schema (if applicable).\nConduct research by listing the data you gather.\nGenerate the research report.\nInput\nUser instruction\nOutput\nReturn the dataframe_id of the data list in a valid JSON format as follows:{'dataframe_id': 'xxxxxxx'}",
             "model": "gpt-4o",
             "tools": [ "tsdb_query"]
         }
+
 
 ANALYZE_AGENT_CONFIG = {
             "name": "crypto_analyst_agent",

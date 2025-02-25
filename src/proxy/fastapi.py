@@ -189,6 +189,16 @@ class FastApi:
         }
         return await self._request("POST", '/v1/agent/run', data=data)
 
+    async def tsdb_query(self, user_id: str, dataframe_id: str):
+        data = {
+            "user_id": user_id,
+            "dataframe":{
+                "id": dataframe_id,
+            },
+            "query": ""
+        }
+        return await self._request("POST", '/v1/tool/tsdb/query', data=data)
+
     async def close(self):
         """Close the session"""
         if self.session and not self.session.closed:
@@ -202,3 +212,15 @@ class FastApi:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit point"""
         await self.close()
+
+async def main():
+    from src.const import GPT_ID, RESEARCH_AGENT_CONFIG
+    fastapi = FastApi(base_url='https://api-dev.fastest.ai')
+    result = await fastapi.create_agent(gpt_id=GPT_ID, agent_conf=RESEARCH_AGENT_CONFIG)
+    # result = await fastapi.delete_agent(GPT_ID, '67bd30729d7985a254ed05c2')
+    print(result)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+

@@ -5,6 +5,7 @@ import logging
 import time
 import base64
 import zlib
+import pandas
 
 
 from fastapi import APIRouter, HTTPException, Request
@@ -20,6 +21,7 @@ from src.action.models import CheckTradeAction, IsTargetPage
 from src.prompt import CHECK_TRADE_ACTION, CHECK_TARGET_PAGE
 from src.utils.llm import call_llm
 from src.const import GPT_ID, ANALYZE_AGENT_ID, EXECUTION_AGENT_ID, RESEARCH_AGENT_ID
+from src.utils.content import list_dict_to_markdown
 
 logger = logging.getLogger(__name__)
 router = APIRouter(include_in_schema=False)
@@ -280,19 +282,42 @@ async def chat(request: ChatMessage):
             
             check_trade_action_content = CheckTradeActionRequest(nlp=request.content)
             check_result = await check_trade_action(check_trade_action_content)
-            agent_ids = [EXECUTION_AGENT_ID]
+            # agent_ids = [EXECUTION_AGENT_ID]
             if not check_result["parsed"].is_trade_action:
-                agent_ids = [RESEARCH_AGENT_ID, ANALYZE_AGENT_ID]
-                content += '\n response format: if output contain table list, return markdown format'
+                # agent_ids = [RESEARCH_AGENT_ID, ANALYZE_AGENT_ID]
+                # content += '\n response format: if output contain table list, return markdown format'
             # 在调用 get_chat_response 时传入超时参数
             # response = await fastapi.get_chat_response(
             #     gpt_user_id,
             #     content,
             #     gpt_id,
             #     agent_ids=agent_ids
-            # )
+            # ) 
+                run_agent_start_time = time.time()
                 response = await fastapi.run_agent(agent_id=RESEARCH_AGENT_ID, task=content)
+                run_agent_end_time = time.time()
+                logger.info(f"run agent time: {run_agent_end_time - run_agent_start_time}")
                 response_content = pydash.get(response.data, 'result')
+                try:
+                    dataframe = json.loads(response_content)
+                    tsdb_query_start_time = time.time()
+                    data = await fastapi.tsdb_query(user_id=gpt_user_id, dataframe_id= dataframe['dataframe_id'])
+                    tsdb_query_end_time = time.time()
+                    logger.info(f"tsdb_query time: {tsdb_query_end_time - tsdb_query_start_time}")
+                    dataframe_data = pydash.get(data, 'data.dataframe.data')
+
+                    df = pandas.DataFrame(dataframe_data)
+                    ## 只保留前面两列，且过滤掉 none，nan
+                    df = df.dropna(axis=1, how='any')
+                    df = df.iloc[:, :2]
+                    dataframe_list = list(df.to_dict(orient='records'))
+
+                    dataframe_content = list_dict_to_markdown(dataframe_list)
+                except json.decoder.JSONDecodeError as e:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to process chat message: {str(e)}"
+                    )
 
                 if not response.success:
                     raise HTTPException(
@@ -302,8 +327,8 @@ async def chat(request: ChatMessage):
             else:
                 content = f'user message: {check_result["parsed"].action} {check_result["parsed"].amount} {check_result["parsed"].coin_name}'
                 await browser_plugin_instance.status_queue.put(content)
-                response_content = ''
-            return response_content
+                dataframe_content = ''
+            return dataframe_content
 
     except asyncio.TimeoutError:
         raise HTTPException(
