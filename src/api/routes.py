@@ -307,6 +307,9 @@ async def chat(request: ChatMessage):
                     dataframe_data = pydash.get(data, 'data.dataframe.data')
 
                     df = pandas.DataFrame(dataframe_data)
+                    ## 如果存在 timestamp 列则过滤掉 timestamp 的列
+                    if 'timestamp' in df.columns:
+                        df = df.drop(columns=['timestamp'])
                     ## 只保留前面两列，且过滤掉 none，nan
                     df = df.dropna(axis=1, how='any')
                     df = df.iloc[:, :2]
