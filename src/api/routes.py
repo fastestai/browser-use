@@ -6,15 +6,14 @@ import time
 import base64
 import zlib
 
-
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Request
 from sse_starlette.sse import EventSourceResponse
 
 from src.action.action_agent_manger.server import ActionAgentManager
 from src.action.models import ActionAgentConfig
 from src.monitor.model import BrowserPluginMonitorAgent
 from src.monitor.server import MonitorService
-from src.proxy.fastapi import FastApi
+from src.proxy.fastapi import AIService
 from src.api.model import ActionResultRequest, ActionRequest, CheckTradeActionRequest, CheckTargetPageRequest, BrowserActionNlpRequest, BrowserActionNlpResponse, ChatMessage, AgentRegisterRequest
 from src.action.models import CheckTradeAction, IsTargetPage
 from src.prompt import CHECK_TRADE_ACTION, CHECK_TARGET_PAGE
@@ -22,13 +21,13 @@ from src.utils.llm import call_llm
 from src.const import GPT_ID, ANALYZE_AGENT_ID, EXECUTION_AGENT_ID, RESEARCH_AGENT_ID
 
 logger = logging.getLogger(__name__)
-router = APIRouter(include_in_schema=False)
+router = APIRouter(tags=["Browser Actions"])
 public_router = APIRouter(
     tags=["Tool"]  # 设置 API 分组标签为 Tool
 )
 monitor_service = MonitorService()
-
-fastapi = FastApi()
+app = FastAPI()
+gpt_service = AIService()
 
 action_agent_manager = ActionAgentManager()
 
@@ -158,7 +157,7 @@ async def register_agent(request: AgentRegisterRequest):
     if agent_id in monitor_service.agents:
         logger.info("agent already register")
         return
-    create_gpt_result = await fastapi.create_gpt_user()
+    create_gpt_result = await gpt_service.create_gpt_user()
     logger.info(f"create user result: {create_gpt_result}")
     user_id =create_gpt_result.data["user_id"]
     logger.info(f"user id: {user_id}")
@@ -317,3 +316,5 @@ async def chat(request: ChatMessage):
             detail=f"Failed to process chat message: {str(e)}"
         )
 
+# app.include_router(router)
+app.include_router(public_router)

@@ -16,7 +16,7 @@ class ApiResponse(BaseModel):
     error: Optional[str] = None
     timestamp: datetime = datetime.now()
 
-class FastApi:
+class AIService:
     """External API service for making HTTP requests"""
     
     def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
