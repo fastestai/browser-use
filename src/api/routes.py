@@ -90,6 +90,7 @@ async def get_next_action(request: ActionRequest):
         result = decompressed_data.decode('utf-8')
         json_res = json.loads(result)
         start_time = time.time()
+        logger.info("========= start get next action =========")
         chat_request_id = json_res["chat_request_id"]
         action_agent_conf = ActionAgentConfig(task=json_res["task"],llm=None)
         action_agent = action_agent_manager.get_agent(chat_request_id, action_agent_conf)
