@@ -328,7 +328,7 @@ async def chat(request: ChatMessage):
                         detail=response.error
                     )
             else:
-                content = f'user message: {check_result["parsed"].action} {check_result["parsed"].amount} {check_result["parsed"].coin_name}'
+                content = f'user intend: {check_result["parsed"].action} {check_result["parsed"].amount} {check_result["parsed"].coin_name}'
                 await browser_plugin_instance.status_queue.put(content)
                 dataframe_content = ''
             return dataframe_content
