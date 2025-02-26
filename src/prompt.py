@@ -41,6 +41,7 @@ CHECK_TRADE_ACTION = """
         """
 
 EXTEND_SYSTEM_MESSAGE = """
-REMEMBER the most important RULE:
-Returns only one action at a time, preventing page changes
+REMEMBER the other important RULE:
+1. Returns only one action at a time, preventing page changes
+2. If you can't locate the element you want for more than 2 times, you can start trying to scroll.
 """

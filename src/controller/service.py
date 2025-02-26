@@ -205,11 +205,11 @@ class Controller(Generic[Context]):
 				include_in_memory=True,
 			)
 
-		# # scroll up
-		# @self.registry.action(
-		# 	'Scroll up the page by pixel amount - if no amount is specified, scroll up one page',
-		# 	param_model=ScrollAction,
-		# )
+		# scroll up
+		@self.registry.action(
+			'Scroll up the page by pixel amount - if no amount is specified, scroll up one page',
+			param_model=ScrollAction,
+		)
 		async def scroll_up(params: ScrollAction, browser: BrowserContext):
 			page = await browser.get_current_page()
 			if params.amount is not None:
