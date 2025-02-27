@@ -195,7 +195,8 @@ class FastApi:
             "dataframe":{
                 "id": dataframe_id,
             },
-            "query": ""
+            "query": "",
+            "limit": 50
         }
         return await self._request("POST", '/v1/tool/tsdb/query', data=data)
 
