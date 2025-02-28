@@ -96,6 +96,8 @@ async def get_next_action(request: ActionRequest):
         action_agent = action_agent_manager.get_agent(chat_request_id, action_agent_conf)
         model_output = await action_agent.get_next_actions(json_res["dom_tree"], json_res["url"], json_res["title"], json_res["tabs"])
         end_time = time.time()
+        serializable_selector_map = action_agent.get_selector_map_serializable()
+        model_output.update({"selector_map": serializable_selector_map})
         logger.info(f"get next action time: {end_time - start_time}")
         return model_output
     except Exception as e:

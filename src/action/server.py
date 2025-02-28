@@ -1,6 +1,8 @@
 import logging
+import gc
 
-from typing import List, Optional
+from typing import List, Optional, Any
+from dataclasses import dataclass
 
 from browser_use.browser.views import BrowserState, TabInfo
 from browser_use.agent.message_manager.service import MessageManager, MessageManagerSettings
@@ -17,11 +19,12 @@ from browser_use.dom.views import (
 	DOMElementNode,
 	DOMTextNode,
 	SelectorMap,
-	ViewportInfo,
 )
 
-from src.action.models import MySystemPrompt
-
+@dataclass
+class ViewportInfo:
+	width: int
+	height: int
 
 logger = logging.getLogger(__name__)
 
@@ -64,103 +67,117 @@ class ActionAgentService:
         # Create output model with the dynamic actions
         self.AgentOutput = AgentOutput.type_with_custom_actions(self.ActionModel)
 
-    def _create_selector_map(self, element_tree: DOMElementNode) -> SelectorMap:
+    async def _construct_dom_tree(
+            self,
+            eval_page: dict,
+    ) -> tuple[DOMElementNode, SelectorMap]:
+        js_node_map = eval_page['map']
+        js_root_id = eval_page['rootId']
+
         selector_map = {}
+        node_map = {}
 
-        def process_node(node: DOMBaseNode):
+        for id, node_data in js_node_map.items():
+            node, children_ids = self._parse_node(node_data)
+            if node is None:
+                continue
+
+            node_map[id] = node
+
+            if isinstance(node, DOMElementNode) and node.highlight_index is not None:
+                selector_map[node.highlight_index] = node
+
+            # NOTE: We know that we are building the tree bottom up
+            #       and all children are already processed.
             if isinstance(node, DOMElementNode):
-                if node.highlight_index is not None:
-                    selector_map[node.highlight_index] = node
+                for child_id in children_ids:
+                    if child_id not in node_map:
+                        continue
 
-                for child in node.children:
-                    process_node(child)
+                    child_node = node_map[child_id]
 
-        process_node(element_tree)
-        return selector_map
+                    child_node.parent = node
+                    node.children.append(child_node)
+
+        html_to_dict = node_map[str(js_root_id)]
+
+        del node_map
+        del js_node_map
+        del js_root_id
+
+        gc.collect()
+
+        if html_to_dict is None or not isinstance(html_to_dict, DOMElementNode):
+            raise ValueError('Failed to parse HTML to dictionary')
+
+        return html_to_dict, selector_map
+
+    def get_selector_map_serializable(self) -> dict[str, Any]:
+        serializable_selector_map = {}
+        for idx, node in self.current_state.selector_map.items():
+            serializable_selector_map[idx] = {
+                "tag_name": node.tag_name,
+                "xpath": node.xpath,
+                "attributes": node.attributes,
+                "is_interactive": node.is_interactive,
+                "is_visible": node.is_visible,
+                "is_top_element": node.is_top_element,
+                "is_in_viewport": node.is_in_viewport,
+                "highlight_index": node.highlight_index,
+                "viewport_coordinates": node.viewport_coordinates.model_dump() if node.viewport_coordinates else None,
+                "page_coordinates": node.page_coordinates.model_dump() if node.page_coordinates else None,
+                "viewport_info": {"width": node.viewport_info.width,
+                                  "height": node.viewport_info.height} if node.viewport_info else None
+            }
+        return serializable_selector_map
 
     def _parse_node(
             self,
             node_data: dict,
-            parent: Optional[DOMElementNode] = None,
-    ) -> Optional[DOMBaseNode]:
+    ) -> tuple[Optional[DOMBaseNode], list[int]]:
         if not node_data:
-            return None
+            return None, []
 
+        # Process text nodes immediately
         if node_data.get('type') == 'TEXT_NODE':
             text_node = DOMTextNode(
                 text=node_data['text'],
                 is_visible=node_data['isVisible'],
-                parent=parent,
+                parent=None,
             )
-            return text_node
+            return text_node, []
 
-        tag_name = node_data['tagName']
+        # Process coordinates if they exist for element nodes
 
-        # Parse coordinates if they exist
-        viewport_coordinates = None
-        page_coordinates = None
         viewport_info = None
-
-        if 'viewportCoordinates' in node_data:
-            viewport_coordinates = CoordinateSet(
-                top_left=Coordinates(**node_data['viewportCoordinates']['topLeft']),
-                top_right=Coordinates(**node_data['viewportCoordinates']['topRight']),
-                bottom_left=Coordinates(**node_data['viewportCoordinates']['bottomLeft']),
-                bottom_right=Coordinates(**node_data['viewportCoordinates']['bottomRight']),
-                center=Coordinates(**node_data['viewportCoordinates']['center']),
-                width=node_data['viewportCoordinates']['width'],
-                height=node_data['viewportCoordinates']['height'],
-            )
-
-        if 'pageCoordinates' in node_data:
-            page_coordinates = CoordinateSet(
-                top_left=Coordinates(**node_data['pageCoordinates']['topLeft']),
-                top_right=Coordinates(**node_data['pageCoordinates']['topRight']),
-                bottom_left=Coordinates(**node_data['pageCoordinates']['bottomLeft']),
-                bottom_right=Coordinates(**node_data['pageCoordinates']['bottomRight']),
-                center=Coordinates(**node_data['pageCoordinates']['center']),
-                width=node_data['pageCoordinates']['width'],
-                height=node_data['pageCoordinates']['height'],
-            )
 
         if 'viewport' in node_data:
             viewport_info = ViewportInfo(
-                scroll_x=node_data['viewport']['scrollX'],
-                scroll_y=node_data['viewport']['scrollY'],
                 width=node_data['viewport']['width'],
                 height=node_data['viewport']['height'],
             )
 
         element_node = DOMElementNode(
-            tag_name=tag_name,
+            tag_name=node_data['tagName'],
             xpath=node_data['xpath'],
             attributes=node_data.get('attributes', {}),
-            children=[],  # Initialize empty, will fill later
+            children=[],
             is_visible=node_data.get('isVisible', False),
             is_interactive=node_data.get('isInteractive', False),
             is_top_element=node_data.get('isTopElement', False),
+            is_in_viewport=node_data.get('isInViewport', False),
             highlight_index=node_data.get('highlightIndex'),
             shadow_root=node_data.get('shadowRoot', False),
-            parent=parent,
-            viewport_coordinates=viewport_coordinates,
-            page_coordinates=page_coordinates,
+            parent=None,
             viewport_info=viewport_info,
         )
 
-        children: list[DOMBaseNode] = []
-        for child in node_data.get('children', []):
-            if child is not None:
-                child_node = self._parse_node(child, parent=element_node)
-                if child_node is not None:
-                    children.append(child_node)
+        children_ids = node_data.get('children', [])
 
-        element_node.children = children
+        return element_node, children_ids
 
-        return element_node
-
-    def _set_current_state(self, dom_tree: dict, url: str, title: str, tabs: List[TabInfo]):
-        element_tree = self._parse_node(node_data=dom_tree)
-        selector_map = self._create_selector_map(element_tree)
+    async def _set_current_state(self, dom_tree: dict, url: str, title: str, tabs: List[TabInfo]):
+        element_tree, selector_map = await self._construct_dom_tree(dom_tree)
 
         self.current_state = BrowserState(
             element_tree=element_tree,
@@ -171,7 +188,7 @@ class ActionAgentService:
         )
 
     async def get_next_actions(self, dom_tree: dict, url: str, title: str, tabs: List[TabInfo]):
-        self._set_current_state(dom_tree, url, title, tabs)
+        await self._set_current_state(dom_tree, url, title, tabs)
 
         self.message_manager.add_state_message(self.current_state, self.latest_result)
 
