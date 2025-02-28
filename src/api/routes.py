@@ -363,7 +363,7 @@ async def chat(request: ChatMessage):
 async def get_content_by_image(request: GetContentByImageRequest):
     result = await call_llm_with_image(
         system_content= request.prompt,
-        human_content=f"""\n NLP: {request.content} \n""",
+        human_content=f"""\n NLP: {request.nlp} \n""",
         schema=GetContentByImage
     )
     return result
