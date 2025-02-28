@@ -364,7 +364,8 @@ async def get_content_by_image(request: GetContentByImageRequest):
     result = await call_llm_with_image(
         system_content= request.prompt,
         human_content=f"""\n NLP: {request.nlp} \n""",
-        schema=GetContentByImage
+        schema=GetContentByImage,
+        image_base64=request.image_base64,
     )
     return result
 
