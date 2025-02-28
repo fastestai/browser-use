@@ -18,6 +18,9 @@ class ActionAgentConfig(BaseModel):
     task: str
     llm: Optional[ChatOpenAI]
 
+class GetContentByImage(BaseModel):
+    table_list: list[dict]
+
 
 class MySystemPrompt(SystemPrompt):
     def important_rules(self) -> str:

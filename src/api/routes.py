@@ -16,10 +16,20 @@ from src.action.models import ActionAgentConfig
 from src.monitor.model import BrowserPluginMonitorAgent
 from src.monitor.server import MonitorService
 from src.proxy.fastapi import FastApi
-from src.api.model import ActionResultRequest, ActionRequest, CheckTradeActionRequest, CheckTargetPageRequest, BrowserActionNlpRequest, BrowserActionNlpResponse, ChatMessage, AgentRegisterRequest
-from src.action.models import CheckTradeAction, IsTargetPage
+from src.api.model import (
+    ActionResultRequest, 
+    ActionRequest, 
+    CheckTradeActionRequest, 
+    CheckTargetPageRequest, 
+    BrowserActionNlpRequest, 
+    BrowserActionNlpResponse, 
+    ChatMessage, 
+    AgentRegisterRequest, 
+    GetContentByImageRequest
+)
+from src.action.models import CheckTradeAction, IsTargetPage, GetContentByImage
 from src.prompt import CHECK_TRADE_ACTION, CHECK_TARGET_PAGE
-from src.utils.llm import call_llm
+from src.utils.llm import call_llm, call_llm_with_image
 from src.const import GPT_ID, ANALYZE_AGENT_ID, EXECUTION_AGENT_ID, RESEARCH_AGENT_ID
 from src.utils.content import list_dict_to_markdown
 
@@ -347,4 +357,16 @@ async def chat(request: ChatMessage):
             status_code=500,
             detail=f"Failed to process chat message: {str(e)}"
         )
+
+
+@router.post("/get_content_by_image")
+async def get_content_by_image(request: GetContentByImageRequest):
+    result = await call_llm_with_image(
+        system_content= request.prompt,
+        human_content=f"""\n NLP: {request.content} \n""",
+        schema=GetContentByImage
+    )
+    return result
+
+
 

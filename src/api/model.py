@@ -78,3 +78,8 @@ class ActionResultRequest(BaseModel):
 
 class CheckTradeActionRequest(BaseModel):
     nlp: str
+
+class GetContentByImageRequest(BaseModel):
+    image_base64: str
+    nlp: str
+    prompt: str
