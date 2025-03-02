@@ -25,13 +25,17 @@ from src.api.model import (
     BrowserActionNlpResponse, 
     ChatMessage, 
     AgentRegisterRequest, 
-    GetContentByImageRequest
+    GetContentByImageRequest,
+    SaveStrategyRequest,
+    UpdateStrategyRequest,
+    RunStrategyRequest
 )
 from src.action.models import CheckTradeAction, IsTargetPage, GetContentByImage
 from src.prompt import CHECK_TRADE_ACTION, CHECK_TARGET_PAGE
 from src.utils.llm import call_llm, call_llm_with_image
 from src.const import GPT_ID, ANALYZE_AGENT_ID, EXECUTION_AGENT_ID, RESEARCH_AGENT_ID
 from src.utils.content import list_dict_to_markdown
+from src.strategy.server import StrategyServer
 
 logger = logging.getLogger(__name__)
 router = APIRouter(include_in_schema=False)
@@ -43,6 +47,8 @@ monitor_service = MonitorService()
 fastapi = FastApi()
 
 action_agent_manager = ActionAgentManager()
+
+strategy_server = StrategyServer()
 
 
 @router.post("/action/result")
@@ -368,6 +374,36 @@ async def get_content_by_image(request: GetContentByImageRequest):
         image_base64=request.image_base64,
     )
     return result
+
+
+@router.post("/strategy/create")
+async def save_strategy(request: SaveStrategyRequest):
+    result = await strategy_server.create_strategies(request.strategy)
+    return result
+
+
+@router.post("/strategy/list")
+async def get_strategy(request: Request):
+    result = await strategy_server.list_strategies()
+    return result
+
+
+@router.post("/strategy/update")
+async def update_strategy(request: UpdateStrategyRequest):
+    result = await strategy_server.update_strategies(request.strategy)
+    return result
+
+
+@router.post("/strategy/run")
+async def update_strategy(request: RunStrategyRequest):
+    strategy = await strategy_server.run_strategy(request.strategy_id)
+    return strategy
+
+
+
+
+
+
 
 
 

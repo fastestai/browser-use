@@ -83,3 +83,12 @@ class GetContentByImageRequest(BaseModel):
     image_base64: str
     nlp: str
     prompt: str
+
+class SaveStrategyRequest(BaseModel):
+    strategy: dict
+
+class UpdateStrategyRequest(BaseModel):
+    strategy: dict
+
+class RunStrategyRequest(BaseModel):
+    strategy_id: str
