@@ -2,6 +2,7 @@ import os
 import pydash
 import json
 import logging
+import pandas
 
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
@@ -10,7 +11,7 @@ from src.api.model import Strategy
 from src.proxy.fastapi import FastApi
 from src.const import STRATEGY_AGENT_ID, RESEARCH_FORMAT_AGENT_ID
 from src.monitor.model import BrowserPluginMonitorAgent
-from src.utils.content import check_valid_json
+from src.utils.content import check_valid_json, list_dict_to_markdown
 
 mongo_uri = os.environ.get("MONGO_URI", "mongodb://localhost:47017")
 db_name = os.environ.get("MONGO_DATABASE", "test")
@@ -85,8 +86,7 @@ class StrategyServer:
         strategy_doc['id'] = str(strategy_doc['_id'])
         del strategy_doc['_id']
 
-        logger.info(f'{strategy_doc["llm"]["is_research"]}, {bool(strategy_doc["llm"]["is_research"])}')
-        
+
         if strategy_doc["llm"]["is_research"]:
             task = f'{strategy_doc["llm"]["research_content"]}'
             result = await fast_api.run_agent(agent_id=RESEARCH_FORMAT_AGENT_ID, task=task)
@@ -98,6 +98,20 @@ class StrategyServer:
             query_result = await fast_api.tsdb_query(user_id, dataframe_id)
             dataframe_data = pydash.get(query_result, 'data.dataframe.data')
             token = pydash.get(dataframe_data, '0.token')
+            if not strategy_doc["llm"]["is_action"]:
+                df = pandas.DataFrame(dataframe_data)
+                ## 如果存在 timestamp 列则过滤掉 timestamp 的列
+                if 'timestamp' in df.columns:
+                    df = df.drop(columns=['timestamp'])
+                ## 只保留前面两列，且过滤掉 none，nan
+                df = df.dropna(axis=1, how='any')
+                df = df.iloc[:, :2]
+                dataframe_list = list(df.to_dict(orient='records'))
+
+                dataframe_content = list_dict_to_markdown(dataframe_list)
+                return dataframe_content
+
+
         if strategy_doc["llm"]["is_action"]:
             task = f'{strategy_doc["llm"]["action_content"]}, the token name : {token}' if token else strategy_doc["llm"]["action_content"]
             await plugin_instance.status_queue.put(task)

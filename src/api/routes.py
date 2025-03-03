@@ -406,12 +406,12 @@ async def update_strategy(request: RunStrategyRequest):
         )
     browser_plugin_instance = monitor_service.get_agent(co_instance_id)
     gpt_user_id = browser_plugin_instance.get_gpt_user_id()
-    strategy = await strategy_server.run_strategy(
+    result = await strategy_server.run_strategy(
         strategy_id=request.strategy_id,
         plugin_instance=browser_plugin_instance,
         user_id=gpt_user_id
     )
-    return strategy
+    return result
 
 
 
