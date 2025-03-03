@@ -92,6 +92,7 @@ class StrategyServer:
             result = await fast_api.run_agent(agent_id=RESEARCH_FORMAT_AGENT_ID, task=task)
             research_result = pydash.get(result, 'data.result')
             if not check_valid_json(research_result):
+                logger.info(f"Research result {research_result}")
                 return research_result
             result_json = json.loads(research_result)
             dataframe_id = result_json["dataframe_id"]

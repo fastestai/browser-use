@@ -1,4 +1,6 @@
 import json
+import logging
+
 
 def list_dict_to_markdown(data: list[dict]) -> str:
     if not data or not isinstance(data, list) or not all(isinstance(item, dict) for item in data):
@@ -36,5 +38,6 @@ def check_valid_json(content: str) -> bool:
     try:
         json_data = json.loads(content)
         return True
-    except json.decoder.JSONDecodeError:
+    except json.decoder.JSONDecodeError as e:
+        logging.info(f"Content {content} is invalid {str(e)}")
         return False
