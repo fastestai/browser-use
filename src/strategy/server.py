@@ -63,7 +63,7 @@ class StrategyServer:
 
 
     async def list_strategies(self):
-        cursor = self.collection.find()
+        cursor = self.collection.find().sort("_id", -1)
         strategies = []
         async for doc in cursor:
             # Convert ObjectId to string
