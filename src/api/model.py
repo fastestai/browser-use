@@ -84,11 +84,18 @@ class GetContentByImageRequest(BaseModel):
     nlp: str
     prompt: str
 
+class Strategy(BaseModel):
+    id: str | None = None
+    name: str
+    description: str
+    content: str
+
 class SaveStrategyRequest(BaseModel):
-    strategy: dict
+    strategy: Strategy
 
 class UpdateStrategyRequest(BaseModel):
-    strategy: dict
+    strategy: Strategy
 
 class RunStrategyRequest(BaseModel):
     strategy_id: str
+    co_instance_id: str

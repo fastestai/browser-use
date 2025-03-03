@@ -34,7 +34,7 @@ from src.action.models import CheckTradeAction, IsTargetPage, GetContentByImage
 from src.prompt import CHECK_TRADE_ACTION, CHECK_TARGET_PAGE
 from src.utils.llm import call_llm, call_llm_with_image
 from src.const import GPT_ID, ANALYZE_AGENT_ID, EXECUTION_AGENT_ID, RESEARCH_AGENT_ID
-from src.utils.content import list_dict_to_markdown
+from src.utils.content import list_dict_to_markdown, check_valid_json
 from src.strategy.server import StrategyServer
 
 logger = logging.getLogger(__name__)
@@ -317,6 +317,8 @@ async def chat(request: ChatMessage):
                 run_agent_end_time = time.time()
                 logger.info(f"run agent time: {run_agent_end_time - run_agent_start_time}")
                 response_content = pydash.get(response.data, 'result')
+                if not check_valid_json(response_content):
+                    return response_content
                 try:
                     dataframe = json.loads(response_content)
                     tsdb_query_start_time = time.time()
@@ -396,7 +398,19 @@ async def update_strategy(request: UpdateStrategyRequest):
 
 @router.post("/strategy/run")
 async def update_strategy(request: RunStrategyRequest):
-    strategy = await strategy_server.run_strategy(request.strategy_id)
+    co_instance_id = request.co_instance_id
+    if co_instance_id not in monitor_service.get_agents():
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process chat message: agent not found"
+        )
+    browser_plugin_instance = monitor_service.get_agent(co_instance_id)
+    gpt_user_id = browser_plugin_instance.get_gpt_user_id()
+    strategy = await strategy_server.run_strategy(
+        strategy_id=request.strategy_id,
+        plugin_instance=browser_plugin_instance,
+        user_id=gpt_user_id
+    )
     return strategy
 
 
