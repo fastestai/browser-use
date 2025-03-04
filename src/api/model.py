@@ -80,9 +80,11 @@ class CheckTradeActionRequest(BaseModel):
     nlp: str
 
 class GetContentByImageRequest(BaseModel):
-    image_base64: str
-    nlp: str
-    prompt: str
+    image_url: str
+    content: str
+    entity_type: str | None
+    page_url: str
+    user_id: str
 
 class Strategy(BaseModel):
     id: str | None = None

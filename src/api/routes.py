@@ -367,14 +367,14 @@ async def chat(request: ChatMessage):
         )
 
 
-@router.post("/get_content_by_image")
-async def get_content_by_image(request: GetContentByImageRequest):
-    result = await call_llm_with_image(
-        system_content= request.prompt,
-        human_content=f"""\n NLP: {request.nlp} \n""",
-        schema=GetContentByImage,
-        image_base64=request.image_base64,
-    )
+@router.post("/dataframe/create")
+async def save_content_by_image_html(request: GetContentByImageRequest):
+
+    result = await fastapi.tabby_parse(request.image_url, request.context)
+    logger.info(result)
+    table_list = pydash.get(result, 'data.chunks.0.metadata.table.data')
+
+    result = await fastapi.create_dataframe(user_id=request.user_id, url=request.url, table=table_list, entity_type=request.entity_type)
     return result
 
 

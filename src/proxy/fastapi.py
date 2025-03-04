@@ -199,6 +199,23 @@ class FastApi:
         }
         return await self._request("POST", '/v1/tool/tsdb/query', data=data)
 
+    async def tabby_parse(self, url: str, context: str):
+        data = {
+            "url": url,
+            "context": context,
+        }
+        return await self._request("POST", '/v1/tool/tabby/parse', data=data)
+
+    async def create_dataframe(self, user_id: str, url: str, table: list, entity_type: str | None):
+        data = {
+            "user_id": user_id,
+            "entity_type": "token" if entity_type is None else entity_type,
+            "timestamp": int(datetime.now().timestamp()),
+            "source": url,
+            "data": table
+        }
+        return await self._request("POST", '/v1/tool/tsdb/create', data=data)
+
     async def close(self):
         """Close the session"""
         if self.session and not self.session.closed:
