@@ -36,6 +36,7 @@ from src.utils.llm import call_llm, call_llm_with_image
 from src.const import GPT_ID, ANALYZE_AGENT_ID, EXECUTION_AGENT_ID, RESEARCH_AGENT_ID
 from src.utils.content import list_dict_to_markdown, check_valid_json
 from src.strategy.server import StrategyServer
+from src.utils.oss import OSSUploader
 
 logger = logging.getLogger(__name__)
 router = APIRouter(include_in_schema=False)
@@ -370,11 +371,13 @@ async def chat(request: ChatMessage):
 @router.post("/dataframe/create")
 async def save_content_by_image_html(request: GetContentByImageRequest):
 
-    result = await fastapi.tabby_parse(request.image_url, request.context)
-    logger.info(result)
+    oss_uploader = OSSUploader()
+    image_url = await oss_uploader.upload_base64(request.image_base64)
+    result = await fastapi.tabby_parse(image_url, request.content)
     table_list = pydash.get(result, 'data.chunks.0.metadata.table.data')
-
-    result = await fastapi.create_dataframe(user_id=request.user_id, url=request.url, table=table_list, entity_type=request.entity_type)
+    table_list = [{k.lower(): v for k, v in item.items()} for item in table_list]
+    logger.info(f"table_list: {table_list}")
+    result = await fastapi.create_dataframe(user_id=request.user_id, url=request.page_url, table=table_list, entity_type=request.entity_type)
     return result
 
 
