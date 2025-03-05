@@ -28,7 +28,8 @@ from src.api.model import (
     GetContentByImageRequest,
     SaveStrategyRequest,
     UpdateStrategyRequest,
-    RunStrategyRequest
+    RunStrategyRequest,
+    DeleteStrategyRequest
 )
 from src.action.models import CheckTradeAction, IsTargetPage, GetContentByImage
 from src.prompt import CHECK_TRADE_ACTION, CHECK_TARGET_PAGE
@@ -374,7 +375,7 @@ async def save_content_by_image_html(request: GetContentByImageRequest):
     oss_uploader = OSSUploader()
     image_url = await oss_uploader.upload_base64(request.image_base64)
     result = await fastapi.tabby_parse(image_url, request.content)
-    table_list = pydash.get(result, 'data.chunks.0.metadata.table.data')
+    table_list = pydash.get(result, 'data.results.0.data')
     table_list = [{k.lower(): v for k, v in item.items()} for item in table_list]
     logger.info(f"table_list: {table_list}")
     result = await fastapi.create_dataframe(user_id=request.user_id, url=request.page_url, table=table_list, entity_type=request.entity_type)
@@ -415,6 +416,17 @@ async def update_strategy(request: RunStrategyRequest):
         user_id=gpt_user_id
     )
     return result
+
+@router.post("/strategy/delete")
+async def delete_strategy(request: DeleteStrategyRequest):
+    try:
+        result = await strategy_server.delete_strategies(strategy_id=request.strategy_id)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process chat message: {str(e)}"
+        )
 
 
 

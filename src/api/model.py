@@ -101,3 +101,6 @@ class UpdateStrategyRequest(BaseModel):
 class RunStrategyRequest(BaseModel):
     strategy_id: str
     co_instance_id: str
+
+class DeleteStrategyRequest(BaseModel):
+    strategy_id: str

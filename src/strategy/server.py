@@ -26,7 +26,18 @@ logger = logging.getLogger(__name__)
 async def filled_doc(strategy: Strategy) -> dict:
     content = strategy.content
     result = await fast_api.run_agent(agent_id=STRATEGY_AGENT_ID, task=content)
-    result_json = json.loads(pydash.get(result, 'data.result'))
+    research_result = pydash.get(result, 'data.result')
+    research_result = research_result.replace("```json", "").replace("```", "")
+    if not check_valid_json(research_result):
+        logger.info(f"Research result {research_result}")
+        result_json = {
+            "isAction": False,
+            "actionContent":"",
+            "isResearch": False,
+            "researchContent": ""
+        }
+    else:
+        result_json = json.loads(research_result)
     doc = {
         "name": strategy.name,
         "content": strategy.content,
@@ -36,7 +47,8 @@ async def filled_doc(strategy: Strategy) -> dict:
             "action_content": result_json["actionContent"],
             "is_research": True if result_json["isResearch"] == "true" else False,
             "research_content": result_json["researchContent"],
-        }
+        },
+        "status": "active"
     }
     return doc
 
@@ -61,9 +73,14 @@ class StrategyServer:
         doc["id"] = strategy.id
         return doc
 
+    async def delete_strategies(self, strategy_id: str):
+        await self.collection.find_one_and_update({"_id": ObjectId(strategy_id)}, {"$set": {"status": "deleted"}})
+        return {"result": "success"}
+
+
 
     async def list_strategies(self):
-        cursor = self.collection.find().sort("_id", -1)
+        cursor = self.collection.find({"status":{"$ne":"deleted"}}).sort("_id", -1)
         strategies = []
         async for doc in cursor:
             # Convert ObjectId to string

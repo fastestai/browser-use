@@ -203,6 +203,7 @@ class FastApi:
         data = {
             "url": url,
             "context": context,
+            "generate_summary": False
         }
         return await self._request("POST", '/v1/tool/tabby/parse', data=data)
 
