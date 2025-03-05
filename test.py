@@ -24,7 +24,6 @@ async def main():
     agent = Agent(
         task="buy 100 trump on gmgn.ai",
         llm=ChatOpenAI(model="gpt-4o"),
-        system_prompt_class=MySystemPrompt
     )
     result = await agent.run()
     print(result)

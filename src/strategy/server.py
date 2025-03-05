@@ -6,12 +6,15 @@ import pandas
 
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
+from pydantic import BaseModel
 
 from src.api.model import Strategy
 from src.proxy.fastapi import FastApi
 from src.const import STRATEGY_AGENT_ID, RESEARCH_FORMAT_AGENT_ID
 from src.monitor.model import BrowserPluginMonitorAgent
 from src.utils.content import check_valid_json, list_dict_to_markdown
+from src.utils.llm import call_llm
+from src.prompt import STRATEGY_SYSTEM_MESSAGE
 
 mongo_uri = os.environ.get("MONGO_URI", "mongodb://localhost:47017")
 db_name = os.environ.get("MONGO_DATABASE", "test")
@@ -20,36 +23,35 @@ fast_api = FastApi()
 
 logger = logging.getLogger(__name__)
 
+class StrategyOutput(BaseModel):
+    is_action: bool
+    action_content: str
+    is_research: bool
+    research_content: str
+
+async def get_strategy_output(strategy: Strategy) -> StrategyOutput:
+    result = await call_llm(system_content=STRATEGY_SYSTEM_MESSAGE, human_content=strategy.content,schema=StrategyOutput)
+    return result['parsed']
 
 
 
 async def filled_doc(strategy: Strategy) -> dict:
-    content = strategy.content
-    result = await fast_api.run_agent(agent_id=STRATEGY_AGENT_ID, task=content)
-    research_result = pydash.get(result, 'data.result')
-    research_result = research_result.replace("```json", "").replace("```", "")
-    if not check_valid_json(research_result):
-        logger.info(f"Research result {research_result}")
-        result_json = {
-            "isAction": False,
-            "actionContent":"",
-            "isResearch": False,
-            "researchContent": ""
-        }
-    else:
-        result_json = json.loads(research_result)
+    # print(result["parsed"])
+    strategy_output: StrategyOutput = await get_strategy_output(strategy)
+
     doc = {
         "name": strategy.name,
         "content": strategy.content,
         "description": strategy.description,
         "llm": {
-            "is_action": True if result_json["isAction"] == "true" else False,
-            "action_content": result_json["actionContent"],
-            "is_research": True if result_json["isResearch"] == "true" else False,
-            "research_content": result_json["researchContent"],
+            "is_action": strategy_output.is_action,
+            "action_content": strategy_output.action_content,
+            "is_research": strategy_output.is_research,
+            "research_content": strategy_output.research_content,
         },
         "status": "active"
     }
+    # print(doc)
     return doc
 
 
@@ -94,6 +96,7 @@ class StrategyServer:
     async def run_strategy(self, strategy_id: str, plugin_instance: BrowserPluginMonitorAgent, user_id: str):
         strategy_doc = await self.collection.find_one({"_id": ObjectId(strategy_id)})
         logger.info(f"{strategy_id} -> {strategy_doc['name']}")
+        print(strategy_doc)
         token = None
         result_json = {}
         if strategy_doc is None:
@@ -105,7 +108,7 @@ class StrategyServer:
 
 
         if strategy_doc["llm"]["is_research"]:
-            task = f'{strategy_doc["llm"]["research_content"]}'
+            task = f'{strategy_doc["llm"]["research_content"]}, response format is markdown if exist table list'
             result = await fast_api.run_agent(agent_id=RESEARCH_FORMAT_AGENT_ID, task=task)
             research_result = pydash.get(result, 'data.result')
             research_result = research_result.replace("```json", "").replace("```", "")
@@ -142,9 +145,10 @@ class StrategyServer:
 
 if __name__ == '__main__':
     from dotenv import load_dotenv
+    import asyncio
     load_dotenv()
-    db = AsyncIOMotorClient(mongo_uri)[db_name]
-    db["test"].insert_one({"test":1})
+    strategy = Strategy(name="test",description="test",content="What is a Trump meme coin?")
+    asyncio.run(filled_doc(strategy))
 
 
 
