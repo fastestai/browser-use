@@ -124,7 +124,7 @@ class StrategyServer:
                     df = df.drop(columns=['timestamp'])
                 ## 只保留前面两列，且过滤掉 none，nan
                 df = df.dropna(axis=1, how='any')
-                df = df.iloc[:, :3]
+                # df = df.iloc[:, :3]
                 dataframe_list = list(df.to_dict(orient='records'))
 
                 dataframe_content = list_dict_to_markdown(dataframe_list)
