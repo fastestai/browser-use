@@ -311,6 +311,7 @@ async def chat(request: ChatMessage):
                 run_agent_end_time = time.time()
                 logger.info(f"run agent time: {run_agent_end_time - run_agent_start_time}")
                 response_content = pydash.get(response.data, 'result')
+                response_content = response_content.replace("```json", "").replace("```", "")
                 if not check_valid_json(response_content):
                     return response_content
                 dataframe = json.loads(response_content)
