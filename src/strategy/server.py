@@ -96,7 +96,6 @@ class StrategyServer:
     async def run_strategy(self, strategy_id: str, plugin_instance: BrowserPluginMonitorAgent, user_id: str):
         strategy_doc = await self.collection.find_one({"_id": ObjectId(strategy_id)})
         logger.info(f"{strategy_id} -> {strategy_doc['name']}")
-        print(strategy_doc)
         token = None
         result_json = {}
         if strategy_doc is None:
@@ -108,10 +107,11 @@ class StrategyServer:
 
 
         if strategy_doc["llm"]["is_research"]:
-            task = f'{strategy_doc["llm"]["research_content"]},response format: invalid json'
+            task = f'{strategy_doc["llm"]["research_content"]}'
             result = await fast_api.run_agent(agent_id=RESEARCH_FORMAT_AGENT_ID, task=task)
             research_result = pydash.get(result, 'data.result')
             research_result = research_result.replace("```json", "").replace("```", "")
+            logging.info(f"research result: {research_result}")
             if not check_valid_json(research_result):
                 logger.info(f"Research result {research_result}")
                 return research_result

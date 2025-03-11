@@ -306,12 +306,13 @@ async def chat(request: ChatMessage):
             strategy_output: StrategyOutput = await get_strategy_output(strategy)
             if strategy_output.is_research:
                 run_agent_start_time = time.time()
-                task = f'{strategy_output.research_content}, response format: invalid json'
+                task = f'{strategy_output.research_content}, response format: valid json'
                 response = await fastapi.run_agent(agent_id=RESEARCH_AGENT_ID, task=task)
                 run_agent_end_time = time.time()
                 logger.info(f"run agent time: {run_agent_end_time - run_agent_start_time}")
                 response_content = pydash.get(response.data, 'result')
                 response_content = response_content.replace("```json", "").replace("```", "")
+                logging.info(f"research result: {response_content}")
                 if not check_valid_json(response_content):
                     return response_content
                 dataframe = json.loads(response_content)
