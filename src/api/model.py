@@ -79,10 +79,9 @@ class ActionResultRequest(BaseModel):
 class CheckTradeActionRequest(BaseModel):
     nlp: str
 
-class GetContentByImageRequest(BaseModel):
-    image_base64: str
+class DataframeRequest(BaseModel):
     content: str
-    entity_type: str | None
+    entity_type: str | None = None
     page_url: str
     user_id: str
 

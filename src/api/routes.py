@@ -16,6 +16,7 @@ from src.action.models import ActionAgentConfig
 from src.monitor.model import BrowserPluginMonitorAgent
 from src.monitor.server import MonitorService
 from src.proxy.fastapi import FastApi
+from src.proxy.fastdataapi import FastDataApi
 from src.api.model import (
     ActionResultRequest,
     ActionRequest,
@@ -25,7 +26,7 @@ from src.api.model import (
     BrowserActionNlpResponse,
     ChatMessage,
     AgentRegisterRequest,
-    GetContentByImageRequest,
+    DataframeRequest,
     SaveStrategyRequest,
     UpdateStrategyRequest,
     RunStrategyRequest,
@@ -47,6 +48,7 @@ public_router = APIRouter(
 monitor_service = MonitorService()
 
 fastapi = FastApi()
+fastDataApi = FastDataApi()
 
 action_agent_manager = ActionAgentManager()
 
@@ -353,15 +355,14 @@ async def chat(request: ChatMessage):
 
 
 @router.post("/dataframe/create")
-async def save_content_by_image_html(request: GetContentByImageRequest):
-
-    oss_uploader = OSSUploader()
-    image_url = await oss_uploader.upload_base64(request.image_base64)
-    result = await fastapi.tabby_parse(image_url, request.content)
-    table_list = pydash.get(result, 'data.results.0.data')
-    table_list = [{k.lower(): v for k, v in item.items()} for item in table_list]
-    logger.info(f"table_list: {table_list}")
-    result = await fastapi.create_dataframe(user_id=request.user_id, url=request.page_url, table=table_list, entity_type=request.entity_type)
+async def save_content_by_html(request: DataframeRequest):
+    result = await fastDataApi.extract_tables(request.content)
+    tables = pydash.get(result, 'data.data')
+    for table in tables:
+        table_list = table['table']
+        table_list = [{k.lower(): v for k, v in item.items()} for item in table_list]
+        logger.info(f"table_list: {table_list}")
+        result = await fastapi.create_dataframe(user_id=request.user_id, url=request.page_url, table=table_list, entity_type=request.entity_type)
     return result
 
 
