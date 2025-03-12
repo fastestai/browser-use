@@ -1,16 +1,32 @@
 GPT_ID = '67b036473feaa412f79ead94'
 RESEARCH_AGENT_ID = '67bd850ee0e09541da363980'
-# RESEARCH_AGENT_ID = '67bd34006cc6fc5c56f7d0ee'
+RESEARCH_FORMAT_AGENT_ID = '67c553ac1c59b142105e7426'
 ANALYZE_AGENT_ID = '67b036633feaa412f79ead9a'
 EXECUTION_AGENT_ID = '67b04bee9b9a465aee960826'
+STRATEGY_AGENT_ID = '67c5465e6e6d2a6e85a941dd'
 
-# RESEARCH_AGENT_CONFIG =  {
+STRATEGY_AGENT_CONFIG = {
+            "name": "crypto_strategy_agent",
+            "description": "Analyze user descriptions to determine research and execution components related to token transactions. Can be called multiple times.",
+            "system_message": "Role Description\nYou are an analyzer tasked with identifying research and action elements in user descriptions about tokens. Provide structured outputs in JSON format based on the user's input.\nWorkflow\nUnderstand the user instruction and classify the content as research or action.\nOutput the analysis in the specified JSON format.\nInput\nUser description about tokens.\nOutput\nReturn the analysis in a valid JSON format as follows:\n{\n    'isResearch': 'true/false',\n    'researchContent': 'specific research aspect',\n    'isAction': 'true/false',\n    'actionContent': 'specific action'\n}",
+            "model": "gpt-4o"
+        }
+
+# OLD_RESEARCH_AGENT_CONFIG =  {
 #             "name": "crypto_researcher_agent",
 #             "description": "Conduct research and analysis if necessary. Can be called multiple times.",
 #             "system_message": "### Role Description\nYou are a researcher based on the user's instruction to generate a research report. Only proceed when delegated.\n### Workflow\n1. Understand the user instruction，build the request by the request schema of the tool if using the tool \n2. Conduct research by listing the data you get\n3. Generate the research report\n### Input\n* user instruction\n### Output\n1. On top, tell me your execution plan\n2. Pass your report to the next agent",
 #             "model": "gpt-4o",
 #             "tools": [ "tsdb_query"]
 #         }
+
+RESEARCH_FORMAT_AGENT_CONFIG =  {
+            "name": "crypto_researcher_agent",
+            "description": "Conduct research and analysis if necessary. Can be called multiple times.",
+            "system_message": "Role Description\nYou are a researcher tasked with generating a research report based on user instructions. Proceed only when delegated.\nWorkflow\nUnderstand the user instruction and construct the request based on the tool's request schema (if applicable).\nConduct research by listing the data you gather.\nGenerate the research report.\nInput\nUser instruction\nOutput\nReturn the dataframe_id of the data list in a valid JSON format as follows:{'dataframe_id': 'xxxxxxx', 'report':'xxxxx'}",
+            "model": "gpt-4o",
+            "tools": [ "tsdb_query"]
+        }
 
 RESEARCH_AGENT_CONFIG =  {
             "name": "crypto_researcher_agent",
@@ -19,7 +35,6 @@ RESEARCH_AGENT_CONFIG =  {
             "model": "gpt-4o",
             "tools": [ "tsdb_query"]
         }
-
 
 ANALYZE_AGENT_CONFIG = {
             "name": "crypto_analyst_agent",

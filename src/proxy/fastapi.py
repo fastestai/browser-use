@@ -199,6 +199,24 @@ class FastApi:
         }
         return await self._request("POST", '/v1/tool/tsdb/query', data=data)
 
+    async def tabby_parse(self, url: str, context: str):
+        data = {
+            "url": url,
+            "context": context,
+            "generate_summary": False
+        }
+        return await self._request("POST", '/v1/tool/tabby/parse', data=data)
+
+    async def create_dataframe(self, user_id: str, url: str, table: list, entity_type: str | None):
+        data = {
+            "user_id": user_id,
+            "entity_type": "token" if entity_type is None else entity_type,
+            "timestamp": int(datetime.now().timestamp()),
+            "source": url,
+            "data": table
+        }
+        return await self._request("POST", '/v1/tool/tsdb/create', data=data)
+
     async def close(self):
         """Close the session"""
         if self.session and not self.session.closed:
@@ -214,9 +232,9 @@ class FastApi:
         await self.close()
 
 async def main():
-    from src.const import GPT_ID, RESEARCH_AGENT_CONFIG
+    from src.const import GPT_ID, STRATEGY_AGENT_CONFIG, RESEARCH_FORMAT_AGENT_CONFIG
     fastapi = FastApi(base_url='https://api-dev.fastest.ai')
-    result = await fastapi.create_agent(gpt_id=GPT_ID, agent_conf=RESEARCH_AGENT_CONFIG)
+    result = await fastapi.create_agent(gpt_id='679095f2053c84baac0faa99', agent_conf=RESEARCH_FORMAT_AGENT_CONFIG)
     # result = await fastapi.delete_agent(GPT_ID, '67bd30729d7985a254ed05c2')
     print(result)
 

@@ -81,5 +81,26 @@ class CheckTradeActionRequest(BaseModel):
 
 class GetContentByImageRequest(BaseModel):
     image_base64: str
-    nlp: str
-    prompt: str
+    content: str
+    entity_type: str | None
+    page_url: str
+    user_id: str
+
+class Strategy(BaseModel):
+    id: str | None = None
+    name: str
+    description: str
+    content: str
+
+class SaveStrategyRequest(BaseModel):
+    strategy: Strategy
+
+class UpdateStrategyRequest(BaseModel):
+    strategy: Strategy
+
+class RunStrategyRequest(BaseModel):
+    strategy_id: str
+    co_instance_id: str
+
+class DeleteStrategyRequest(BaseModel):
+    strategy_id: str
