@@ -358,12 +358,14 @@ async def chat(request: ChatMessage):
 async def save_content_by_html(request: DataframeRequest):
     result = await fastDataApi.extract_tables(request.content)
     tables = pydash.get(result, 'data.data')
+    all_results = []
     for table in tables:
         table_list = table['table']
         table_list = [{k.lower(): v for k, v in item.items()} for item in table_list]
         logger.info(f"table_list: {table_list}")
-        result = await fastapi.create_dataframe(user_id=request.user_id, url=request.page_url, table=table_list, entity_type=request.entity_type)
-    return result
+        table_result = await fastapi.create_dataframe(user_id=request.user_id, url=request.page_url, table=table_list, entity_type=request.entity_type)
+        all_results.append(table_result)
+    return {"results": all_results}
 
 
 @router.post("/strategy/create")
