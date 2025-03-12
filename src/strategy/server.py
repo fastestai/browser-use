@@ -107,7 +107,7 @@ class StrategyServer:
 
 
         if strategy_doc["llm"]["is_research"]:
-            task = f'{strategy_doc["llm"]["research_content"]}'
+            task = f'{strategy_doc["llm"]["research_content"]}, \nexample:{"dataframe_id":"xxxx", "report": "xxxx"}'
             result = await fast_api.run_agent(agent_id=RESEARCH_FORMAT_AGENT_ID, task=task)
             research_result = pydash.get(result, 'data.result')
             research_result = research_result.replace("```json", "").replace("```", "")
