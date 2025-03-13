@@ -21,7 +21,7 @@ class ContextRequest(BaseModel):
     gpt_id: str = Field(
         ...,
         description="gpt id",
-    )
+    ),
     user_id: str = Field(
         ...,
         description="user id"
