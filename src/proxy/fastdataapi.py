@@ -113,9 +113,10 @@ class FastDataApi:
                 error=f"Request failed: {str(e)}"
             )
 
-    async def extract_tables(self, content: str):
+    async def extract_tables(self, content: str, source_url: str):
         data = {
-            "html": content
+            "html": content,
+            "source_url": source_url
         }
         return await self._request("POST", '/api/v1/extract/structured-data-tables', data=data)
 
