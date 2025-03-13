@@ -7,7 +7,7 @@ import base64
 import zlib
 import pandas
 
-from src.api.file_context import convert_file_context
+from src.utils.file_context import convert_file_context
 from fastapi import APIRouter, HTTPException, Request
 from sse_starlette.sse import EventSourceResponse
 
@@ -15,7 +15,7 @@ from src.action.action_agent_manger.server import ActionAgentManager
 from src.action.models import ActionAgentConfig
 from src.monitor.model import BrowserPluginMonitorAgent
 from src.monitor.server import MonitorService
-from src.proxy.fastapi import FastApi
+from src.proxy.aiservice import AIService
 from src.proxy.fastdataapi import FastDataApi
 from src.api.model import (
     ActionResultRequest,
@@ -47,7 +47,7 @@ public_router = APIRouter(
 )
 monitor_service = MonitorService()
 
-fastapi = FastApi()
+ai_service = AIService()
 fastDataApi = FastDataApi()
 
 action_agent_manager = ActionAgentManager()
@@ -183,7 +183,7 @@ async def register_agent(request: AgentRegisterRequest):
     if agent_id in monitor_service.agents:
         logger.info("agent already register")
         return
-    create_gpt_result = await fastapi.create_gpt_user()
+    create_gpt_result = await ai_service.create_gpt_user()
     logger.info(f"create user result: {create_gpt_result}")
     user_id =create_gpt_result.data["user_id"]
     logger.info(f"user id: {user_id}")
@@ -316,7 +316,7 @@ async def chat(request: ChatMessage):
                     task = f'base on the context : {file_context}, {task}'
                 logger.debug(f"task:{task}")
 
-                response = await fastapi.run_agent(agent_id=RESEARCH_AGENT_ID, task=task)
+                response = await ai_service.run_agent(agent_id=RESEARCH_AGENT_ID, task=task)
                 run_agent_end_time = time.time()
                 logger.info(f"run agent time: {run_agent_end_time - run_agent_start_time}")
                 response_content = pydash.get(response.data, 'result')

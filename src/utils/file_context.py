@@ -1,10 +1,28 @@
-from typing import Any
+from typing import List
+import logging
+from src.api.model import FileMeta
 
+logger = logging.getLogger(__name__)
 
-def convert_file_context(file_meta: list[dict[str, Any]], content: str) -> str | None:
-	file_context = ''
-	for fl in file_meta:
-		file_context += f'url: {fl["source_url"]}\n'
-		# todo this content is temporary, need to be replaced by the real content by fetch from the file_url or by file_id
-		file_context += f'content: {fl["content"][:5000]}\n'
-	return file_context
+def convert_file_context(file_meta: List[dict], content: str, limit: int = 5000) -> str:
+    """
+    Convert file metadata to a context string format.
+    
+    Args:
+        file_meta: List of file metadata dictionaries containing source_url and content
+        content: Original content string
+        
+    Returns:
+        Formatted context string
+    """
+    file_context = ""
+    logger.debug(f"file_meta: {file_meta}")
+    
+    if not file_meta:
+        return file_context
+        
+    for file in file_meta:
+        file_context += f"url: {file['source_url']}\n"
+        file_context += f"content: {file['content'][:limit]}\n"
+        
+    return file_context 

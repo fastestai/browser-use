@@ -16,7 +16,7 @@ class ApiResponse(BaseModel):
     error: Optional[str] = None
     timestamp: datetime = datetime.now()
 
-class FastApi:
+class AIService:
     """External API service for making HTTP requests"""
     
     def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
@@ -233,8 +233,8 @@ class FastApi:
 
 async def main():
     from src.const import GPT_ID, STRATEGY_AGENT_CONFIG, RESEARCH_FORMAT_AGENT_CONFIG
-    fastapi = FastApi(base_url='https://api-dev.fastest.ai')
-    result = await fastapi.create_agent(gpt_id='679095f2053c84baac0faa99', agent_conf=RESEARCH_FORMAT_AGENT_CONFIG)
+    ai_service = AIService(base_url='https://api-dev.fastest.ai')
+    result = await ai_service.create_agent(gpt_id='679095f2053c84baac0faa99', agent_conf=RESEARCH_FORMAT_AGENT_CONFIG)
     # result = await fastapi.delete_agent(GPT_ID, '67bd30729d7985a254ed05c2')
     print(result)
 
