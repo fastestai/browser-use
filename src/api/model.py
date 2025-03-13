@@ -65,7 +65,7 @@ class ChatMessage(BaseModel):
            {
                 "source_url": "yyy",
                 "file_id": "xxx",
-                "content": ["semi_struct_or_struct_data here"],
+                "content": "semi_struct_or_struct_data here",
                 "file_url": "https://d41chssnpqdne.cloudfront.net/user_upload_by_module/xxxx",
             }
         ]
