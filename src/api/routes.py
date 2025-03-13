@@ -373,7 +373,7 @@ async def context_create(request: ContextCreateRequest):
             continue
             
         try:
-            result = await fastDataApi.extract_tables(file_info['content'])
+            result = await fastDataApi.extract_tables(file_info['content'], file_info['source_url'])
             tables = pydash.get(result, 'data.data')
             
             # Skip if no tables were extracted
