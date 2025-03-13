@@ -19,11 +19,11 @@ class ActionRequest(BaseModel):
 
 class ContextRequest(BaseModel):
     gpt_id: str = Field(
-        default=...,
+        ...,
         description="gpt id",
     )
     user_id: str = Field(
-        default=...,
+        ...,
         description="user id"
     )
 
