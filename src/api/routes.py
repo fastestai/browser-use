@@ -308,15 +308,14 @@ async def chat(request: ChatMessage):
             strategy_output: StrategyOutput = await get_strategy_output(strategy)
             if strategy_output.is_research:
                 run_agent_start_time = time.time()
-                task = f'{strategy_output.research_content}, response format: valid json, json is double quotes, not single quotes.'
-                if request.file_meta:
-                    file_context = convert_file_context(request.file_meta, content)
-                    task = f'base on the context : {file_context}, {task}'
-                    logger.debug(f"task:{task}")
-
                 task = f'''{strategy_output.research_content}, 
                 response format: valid json and json is double quotes, not single quotes.
                 output: only json content, not need other content'''
+                if request.file_meta:
+                    file_context = convert_file_context(request.file_meta, content)
+                    task = f'base on the context : {file_context}, {task}'
+                logger.debug(f"task:{task}")
+
                 response = await fastapi.run_agent(agent_id=RESEARCH_AGENT_ID, task=task)
                 run_agent_end_time = time.time()
                 logger.info(f"run agent time: {run_agent_end_time - run_agent_start_time}")
@@ -366,28 +365,46 @@ async def chat(request: ChatMessage):
 @router.post("/context/create")
 async def context_create(request: ContextCreateRequest):
     entity_type = "token"
-
     file_infos = request.file_infos
     file_meta = []
 
     for file_info in file_infos:
         if file_info['source_url'] is None:
             continue
-        result = await fastDataApi.extract_tables(file_info['content'])
-        tables = pydash.get(result, 'data.data')
-        meta = {
-            "source_url": file_info['source_url'],
-            "title": file_info['title']
-        }
-        table_meta = []
-        for table in tables:
-            table_list = table['table']
-            table_list = [{k.lower(): v for k, v in item.items()} for item in table_list]
-            logger.info(f"table_list: {table_list}")
-            table_result = await fastapi.create_dataframe(user_id=request.user_id, url=file_info['source_url'], table=table_list, entity_type=entity_type)
-            table_meta.append(table_result)
-        meta['table_meta'] = table_meta
-        file_meta.append(meta)
+            
+        try:
+            result = await fastDataApi.extract_tables(file_info['content'])
+            tables = pydash.get(result, 'data.data')
+            
+            # Skip if no tables were extracted
+            if not tables:
+                logger.warning(f"No tables extracted from {file_info['source_url']}")
+                continue
+                
+            meta = {
+                "source_url": file_info['source_url'],
+                "title": file_info['title']
+            }
+            table_meta = []
+            
+            for table in tables:
+                table_list = table['table']
+                table_list = [{k.lower(): v for k, v in item.items()} for item in table_list]
+                table_result = await fastapi.create_dataframe(
+                    user_id=request.user_id, 
+                    url=file_info['source_url'], 
+                    table=table_list, 
+                    entity_type=entity_type
+                )
+                table_meta.append(table_result)
+                
+            meta['table_meta'] = table_meta
+            file_meta.append(meta)
+            
+        except Exception as e:
+            logger.error(f"Error processing file {file_info['source_url']}: {str(e)}")
+            continue
+
     return {"file_meta": file_meta}
 
 @router.post("/strategy/create")
