@@ -6,8 +6,8 @@ import time
 import base64
 import zlib
 import pandas
+from typing import Optional
 
-from src.utils.file_context import convert_file_context
 from fastapi import APIRouter, HTTPException, Request
 from sse_starlette.sse import EventSourceResponse
 
@@ -36,9 +36,8 @@ from src.action.models import CheckTradeAction, IsTargetPage, GetContentByImage
 from src.prompt import CHECK_TRADE_ACTION, CHECK_TARGET_PAGE
 from src.utils.llm import call_llm, call_llm_with_image
 from src.const import GPT_ID, ANALYZE_AGENT_ID, EXECUTION_AGENT_ID, RESEARCH_AGENT_ID
-from src.utils.content import list_dict_to_markdown, check_valid_json
 from src.strategy.server import StrategyServer, get_strategy_output, StrategyOutput
-from src.utils.oss import OSSUploader
+from src.strategy.executor import Executor
 
 logger = logging.getLogger(__name__)
 router = APIRouter(include_in_schema=False)
@@ -284,75 +283,38 @@ async def browser_action_nlp(request: BrowserActionNlpRequest):
         message=f"start action: {content}"
     )
 
+
 @router.post("/chat")
 async def chat(request: ChatMessage):
     try:
-        # 设置超时时间为60分钟
-        timeout = 3600  # 秒
-        async with asyncio.timeout(timeout):  # 使用 asyncio.timeout 上下文管理器
-            gpt_id = GPT_ID
-            token = None
-            dataframe_content = ''
-            co_instance_id = request.co_instance_id
-            if co_instance_id not in monitor_service.get_agents():
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to process chat message: agent not found"
-                )
-            browser_plugin_instance = monitor_service.get_agent(co_instance_id)
+        async with asyncio.timeout(3600):  # 60 minutes timeout
+            # Validate and get browser plugin instance
+            browser_plugin_instance = await _get_browser_plugin(request.co_instance_id)
             gpt_user_id = browser_plugin_instance.get_gpt_user_id()
             
-            content = f"user intend: {request.content}"
-
-            strategy = Strategy(name=co_instance_id,description="",content=content)
+            # Process strategy
+            strategy = Strategy(name=request.co_instance_id, description="", content=f"user intend: {request.content}")
             strategy_output: StrategyOutput = await get_strategy_output(strategy)
+            
+            dataframe_content = ''
+            token = None
+            
+            # Handle research if needed
             if strategy_output.is_research:
-                run_agent_start_time = time.time()
-                task = f'''{strategy_output.research_content}, 
-                response format: valid json and json is double quotes, not single quotes.
-                output: only json content, not need other content'''
-                if request.file_meta:
-                    file_context = convert_file_context(request.file_meta, content)
-                    task = f'base on the context : {file_context}, {task}'
-                logger.debug(f"task:{task}")
-
-                response = await ai_service.run_agent(agent_id=RESEARCH_AGENT_ID, task=task)
-                run_agent_end_time = time.time()
-                logger.info(f"run agent time: {run_agent_end_time - run_agent_start_time}")
-                response_content = pydash.get(response.data, 'result')
-                logger.debug(f"research result: {response_content}")
-                response_content = response_content.replace("```json", "").replace("```", "")
-                logging.info(f"research result: {response_content}")
-                if not check_valid_json(response_content):
-                    return response_content
-                dataframe = json.loads(response_content)
-                tsdb_query_start_time = time.time()
-                data = await ai_service.tsdb_query(user_id=gpt_user_id, dataframe_id= dataframe['dataframe_id'])
-                tsdb_query_end_time = time.time()
-                logger.info(f"tsdb_query time: {tsdb_query_end_time - tsdb_query_start_time}")
-                dataframe_data = pydash.get(data, 'data.dataframe.data')
-                token = pydash.get(dataframe_data, '0.token')
-                if not strategy_output.is_action:
-                    df = pandas.DataFrame(dataframe_data)
-                    ## 如果存在 timestamp 列则过滤掉 timestamp 的列
-                    if 'timestamp' in df.columns:
-                        df = df.drop(columns=['timestamp'])
-                    ## 只保留前面两列，且过滤掉 none，nan
-                    df = df.dropna(axis=1, how='any')
-                    # df = df.iloc[:, :3]
-                    dataframe_list = list(df.to_dict(orient='records'))
-                    dataframe_content = list_dict_to_markdown(dataframe_list)
-                    return dataframe_content
+                executor = Executor()
+                dataframe_content, token = await executor.execute(strategy_output, request, gpt_user_id)
+            
+            # Handle action if needed
             if strategy_output.is_action:
-                task = f'{strategy_output.action_content}, the token name : {token}' if token else \
-                strategy_output.action_content
+                task = f'{strategy_output.action_content}, the token name : {token}' if token else strategy_output.action_content
                 await browser_plugin_instance.status_queue.put(task)
+                
             return dataframe_content
 
     except asyncio.TimeoutError:
         raise HTTPException(
-            status_code=504,  # 使用 504 Gateway Timeout
-            detail=f"Request timed out after {timeout} seconds"
+            status_code=504,
+            detail=f"Request timed out after 3600 seconds"
         )
     except Exception as e:
         logger.error(f"Exception: {e}")
@@ -361,6 +323,14 @@ async def chat(request: ChatMessage):
             detail=f"Failed to process chat message: {str(e)}"
         )
 
+async def _get_browser_plugin(co_instance_id):
+    """Get and validate browser plugin instance"""
+    if co_instance_id not in monitor_service.get_agents():
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to process chat message: agent not found"
+        )
+    return monitor_service.get_agent(co_instance_id)
 
 @router.post("/context/create")
 async def context_create(request: ContextCreateRequest):
