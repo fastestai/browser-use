@@ -26,7 +26,7 @@ class FastApi:
         Args:
             api_key: API key for authentication (if required)
         """
-        self.base_url = base_url or os.getenv('FASTEST_HOST')
+        self.base_url = base_url or os.getenv('FASTEST_HOST', "https://api.fastest.ai")
         self.api_key = api_key
         self.session: Optional[aiohttp.ClientSession] = None
         # 设置默认超时时间（秒）

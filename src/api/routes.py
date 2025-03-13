@@ -7,7 +7,7 @@ import base64
 import zlib
 import pandas
 
-
+from src.api.file_context import convert_file_context
 from fastapi import APIRouter, HTTPException, Request
 from sse_starlette.sse import EventSourceResponse
 
@@ -294,25 +294,33 @@ async def chat(request: ChatMessage):
             token = None
             dataframe_content = ''
             co_instance_id = request.co_instance_id
-            if co_instance_id not in monitor_service.get_agents():
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to process chat message: agent not found"
-                )
-            browser_plugin_instance = monitor_service.get_agent(co_instance_id)
-            gpt_user_id = browser_plugin_instance.get_gpt_user_id()
+            # if co_instance_id not in monitor_service.get_agents():
+            #     raise HTTPException(
+            #         status_code=500,
+            #         detail=f"Failed to process chat message: agent not found"
+            #     )
+            # browser_plugin_instance = monitor_service.get_agent(co_instance_id)
+            # gpt_user_id = browser_plugin_instance.get_gpt_user_id()
+            gpt_user_id = "67d1669d0ba671b2dc3a4456"
             
             content = f"user intend: {request.content}"
+                
 
             strategy = Strategy(name=co_instance_id,description="",content=content)
             strategy_output: StrategyOutput = await get_strategy_output(strategy)
             if strategy_output.is_research:
                 run_agent_start_time = time.time()
                 task = f'{strategy_output.research_content}, response format: valid json, json is double quotes, not single quotes.'
+                if request.file_meta:
+                    file_context = convert_file_context(request.file_meta, content) 
+                    task = f'base on the context : {file_context}, {task}'
+                    logger.debug(f"task:{task}")
+
                 response = await fastapi.run_agent(agent_id=RESEARCH_AGENT_ID, task=task)
                 run_agent_end_time = time.time()
                 logger.info(f"run agent time: {run_agent_end_time - run_agent_start_time}")
                 response_content = pydash.get(response.data, 'result')
+                logger.debug(f"research result: {response_content}")
                 response_content = response_content.replace("```json", "").replace("```", "")
                 logging.info(f"research result: {response_content}")
                 if not check_valid_json(response_content):
@@ -413,12 +421,4 @@ async def delete_strategy(request: DeleteStrategyRequest):
             status_code=500,
             detail=f"Failed to process chat message: {str(e)}"
         )
-
-
-
-
-
-
-
-
 

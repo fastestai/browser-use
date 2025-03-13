@@ -55,9 +55,16 @@ class BrowserActionNlpResponse(BaseModel):
         example="start action: click button"
     )
 
+class FileMeta(BaseModel):
+    source_url: str
+    file_id: str
+    file_url: str
+    content: str | None = None
+
 class ChatMessage(BaseModel):
     co_instance_id: str
     content: str
+    file_meta: List[FileMeta] | None = None
     dataframe: List[dict]
 
 class ChatResponse(BaseModel):
