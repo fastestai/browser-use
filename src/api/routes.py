@@ -26,7 +26,7 @@ from src.api.model import (
     BrowserActionNlpResponse,
     ChatMessage,
     AgentRegisterRequest,
-    DataframeRequest,
+    ContextCreateRequest,
     SaveStrategyRequest,
     UpdateStrategyRequest,
     RunStrategyRequest,
@@ -356,19 +356,32 @@ async def chat(request: ChatMessage):
         )
 
 
-@router.post("/dataframe/create")
-async def save_content_by_html(request: DataframeRequest):
-    result = await fastDataApi.extract_tables(request.content)
-    tables = pydash.get(result, 'data.data')
-    all_results = []
-    for table in tables:
-        table_list = table['table']
-        table_list = [{k.lower(): v for k, v in item.items()} for item in table_list]
-        logger.info(f"table_list: {table_list}")
-        table_result = await fastapi.create_dataframe(user_id=request.user_id, url=request.page_url, table=table_list, entity_type=request.entity_type)
-        all_results.append(table_result)
-    return {"results": all_results}
+@router.post("/context/create")
+async def context_create(request: ContextCreateRequest):
+    entity_type = "token"
+    
+    file_infos = request.file_infos
+    file_meta = []
 
+    for file_info in file_infos:
+        if file_info['source_url'] is None:
+            continue
+        result = await fastDataApi.extract_tables(file_info['content'])
+        tables = pydash.get(result, 'data.data')
+        meta = {
+            "source_url": file_info['source_url'],
+            "title": file_info['title']
+        }
+        table_meta = []
+        for table in tables:
+            table_list = table['table']
+            table_list = [{k.lower(): v for k, v in item.items()} for item in table_list]
+            logger.info(f"table_list: {table_list}")
+            table_result = await fastapi.create_dataframe(user_id=request.user_id, url=file_info['source_url'], table=table_list, entity_type=entity_type)
+            table_meta.append(table_result)
+        meta['table_meta'] = table_meta
+        file_meta.append(meta)
+    return {"file_meta": file_meta}
 
 @router.post("/strategy/create")
 async def save_strategy(request: SaveStrategyRequest):

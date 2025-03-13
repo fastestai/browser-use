@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Any
+from typing import List, Any, Optional
 
 from browser_use.browser.views import TabInfo
 from browser_use.agent.views import (
@@ -19,11 +19,11 @@ class ActionRequest(BaseModel):
 
 class ContextRequest(BaseModel):
     gpt_id: str = Field(
-        ...,
+        default=...,
         description="gpt id",
-    ),
+    )
     user_id: str = Field(
-        ...,
+        default=...,
         description="user id"
     )
 
@@ -33,11 +33,11 @@ class BrowserActionNlpRequest(BaseModel):
     Request model for browser action natural language processing
     """
     context: ContextRequest = Field(
-        ...,
+        default=...,
         description="Context information",
     )
     content: str = Field(
-        ...,
+        default=...,
         description="Natural language description of browser action",
         example="Click the login button on the page",
         min_length=1
@@ -47,8 +47,7 @@ class BrowserActionNlpRequest(BaseModel):
 class BrowserActionNlpResponse(BaseModel):
     status: str = Field(
         description="action status",
-        example="success",
-        enum=["success", "error"]
+        example="success"
     )
     message: str = Field(
         description="action message",
@@ -58,7 +57,18 @@ class BrowserActionNlpResponse(BaseModel):
 class ChatMessage(BaseModel):
     co_instance_id: str
     content: str
-    dataframe: List[dict]
+    file_meta: List[dict[str, Any]] = Field(
+        default=[],
+        description="List of file metadata dictionaries",
+        example=[
+           {
+                "source_url": "yyy",
+                "file_id": "xxx",
+                "content": ["semi_struct_or_struct_data here"],
+                "file_url": "https://d41chssnpqdne.cloudfront.net/user_upload_by_module/xxxx",
+            }
+        ]
+    )
 
 class ChatResponse(BaseModel):
     content: str
@@ -79,11 +89,16 @@ class ActionResultRequest(BaseModel):
 class CheckTradeActionRequest(BaseModel):
     nlp: str
 
-class DataframeRequest(BaseModel):
-    content: str
-    entity_type: str | None = None
-    page_url: str
+class ContextCreateRequest(BaseModel):
+    """
+    Request model for dataframe processing
+    
+    """
     user_id: str
+    file_infos: List[dict] = Field(
+        default=[],
+        description="List of file information objects, source_url, content, title"
+    )
 
 class Strategy(BaseModel):
     id: str | None = None
