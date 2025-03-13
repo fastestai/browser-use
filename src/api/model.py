@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Any, Optional
+from typing import List, Any
 
 from browser_use.browser.views import TabInfo
 from browser_use.agent.views import (
@@ -33,11 +33,11 @@ class BrowserActionNlpRequest(BaseModel):
     Request model for browser action natural language processing
     """
     context: ContextRequest = Field(
-        default=...,
+        ...,
         description="Context information",
     )
     content: str = Field(
-        default=...,
+        ...,
         description="Natural language description of browser action",
         example="Click the login button on the page",
         min_length=1
@@ -47,7 +47,8 @@ class BrowserActionNlpRequest(BaseModel):
 class BrowserActionNlpResponse(BaseModel):
     status: str = Field(
         description="action status",
-        example="success"
+        example="success",
+        enum=["success", "error"]
     )
     message: str = Field(
         description="action message",
