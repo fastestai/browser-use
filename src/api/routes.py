@@ -327,7 +327,7 @@ async def chat(request: ChatMessage):
                     return response_content
                 dataframe = json.loads(response_content)
                 tsdb_query_start_time = time.time()
-                data = await fastapi.tsdb_query(user_id=gpt_user_id, dataframe_id= dataframe['dataframe_id'])
+                data = await ai_service.tsdb_query(user_id=gpt_user_id, dataframe_id= dataframe['dataframe_id'])
                 tsdb_query_end_time = time.time()
                 logger.info(f"tsdb_query time: {tsdb_query_end_time - tsdb_query_start_time}")
                 dataframe_data = pydash.get(data, 'data.dataframe.data')
