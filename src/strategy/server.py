@@ -9,7 +9,7 @@ from bson import ObjectId
 from pydantic import BaseModel
 
 from src.api.model import Strategy
-from src.proxy.fastapi import FastApi
+from src.proxy.aiservice import AIService
 from src.const import STRATEGY_AGENT_ID, RESEARCH_FORMAT_AGENT_ID
 from src.monitor.model import BrowserPluginMonitorAgent
 from src.utils.content import check_valid_json, list_dict_to_markdown
@@ -19,7 +19,7 @@ from src.prompt import STRATEGY_SYSTEM_MESSAGE
 mongo_uri = os.environ.get("MONGO_URI", "mongodb://localhost:47017")
 db_name = os.environ.get("MONGO_DATABASE", "test")
 
-fast_api = FastApi()
+ai_service = AIService()
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ class StrategyServer:
 
         if strategy_doc["llm"]["is_research"]:
             task = f'{strategy_doc["llm"]["research_content"]}，response format: valid json, json is double quotes, not single quotes.'
-            result = await fast_api.run_agent(agent_id=RESEARCH_FORMAT_AGENT_ID, task=task)
+            result = await ai_service.run_agent(agent_id=RESEARCH_FORMAT_AGENT_ID, task=task)
             research_result = pydash.get(result, 'data.result')
             research_result = research_result.replace("```json", "").replace("```", "")
             logging.info(f"research result: {research_result}")
@@ -117,7 +117,7 @@ class StrategyServer:
                 return research_result
             result_json = json.loads(research_result)
             dataframe_id = result_json["dataframe_id"]
-            query_result = await fast_api.tsdb_query(user_id, dataframe_id)
+            query_result = await ai_service.tsdb_query(user_id, dataframe_id)
             dataframe_data = pydash.get(query_result, 'data.dataframe.data')
             token = pydash.get(dataframe_data, '0.token')
             if not strategy_doc["llm"]["is_action"]:
