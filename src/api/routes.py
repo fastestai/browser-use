@@ -390,7 +390,7 @@ async def context_create(request: ContextCreateRequest):
             for table in tables:
                 table_list = table['table']
                 table_list = [{k.lower(): v for k, v in item.items()} for item in table_list]
-                table_result = await fastapi.create_dataframe(
+                table_result = await ai_service.create_dataframe(
                     user_id=request.user_id, 
                     url=file_info['source_url'], 
                     table=table_list, 
