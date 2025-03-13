@@ -26,7 +26,7 @@ from src.api.model import (
     BrowserActionNlpResponse,
     ChatMessage,
     AgentRegisterRequest,
-    DataframeRequest,
+    ContextCreateRequest,
     SaveStrategyRequest,
     UpdateStrategyRequest,
     RunStrategyRequest,
@@ -294,17 +294,15 @@ async def chat(request: ChatMessage):
             token = None
             dataframe_content = ''
             co_instance_id = request.co_instance_id
-            # if co_instance_id not in monitor_service.get_agents():
-            #     raise HTTPException(
-            #         status_code=500,
-            #         detail=f"Failed to process chat message: agent not found"
-            #     )
-            # browser_plugin_instance = monitor_service.get_agent(co_instance_id)
-            # gpt_user_id = browser_plugin_instance.get_gpt_user_id()
-            gpt_user_id = "67d1669d0ba671b2dc3a4456"
+            if co_instance_id not in monitor_service.get_agents():
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to process chat message: agent not found"
+                )
+            browser_plugin_instance = monitor_service.get_agent(co_instance_id)
+            gpt_user_id = browser_plugin_instance.get_gpt_user_id()
             
             content = f"user intend: {request.content}"
-                
 
             strategy = Strategy(name=co_instance_id,description="",content=content)
             strategy_output: StrategyOutput = await get_strategy_output(strategy)
@@ -312,10 +310,13 @@ async def chat(request: ChatMessage):
                 run_agent_start_time = time.time()
                 task = f'{strategy_output.research_content}, response format: valid json, json is double quotes, not single quotes.'
                 if request.file_meta:
-                    file_context = convert_file_context(request.file_meta, content) 
+                    file_context = convert_file_context(request.file_meta, content)
                     task = f'base on the context : {file_context}, {task}'
                     logger.debug(f"task:{task}")
 
+                task = f'''{strategy_output.research_content}, 
+                response format: valid json and json is double quotes, not single quotes.
+                output: only json content, not need other content'''
                 response = await fastapi.run_agent(agent_id=RESEARCH_AGENT_ID, task=task)
                 run_agent_end_time = time.time()
                 logger.info(f"run agent time: {run_agent_end_time - run_agent_start_time}")
@@ -362,19 +363,32 @@ async def chat(request: ChatMessage):
         )
 
 
-@router.post("/dataframe/create")
-async def save_content_by_html(request: DataframeRequest):
-    result = await fastDataApi.extract_tables(request.content)
-    tables = pydash.get(result, 'data.data')
-    all_results = []
-    for table in tables:
-        table_list = table['table']
-        table_list = [{k.lower(): v for k, v in item.items()} for item in table_list]
-        logger.info(f"table_list: {table_list}")
-        table_result = await fastapi.create_dataframe(user_id=request.user_id, url=request.page_url, table=table_list, entity_type=request.entity_type)
-        all_results.append(table_result)
-    return {"results": all_results}
+@router.post("/context/create")
+async def context_create(request: ContextCreateRequest):
+    entity_type = "token"
 
+    file_infos = request.file_infos
+    file_meta = []
+
+    for file_info in file_infos:
+        if file_info['source_url'] is None:
+            continue
+        result = await fastDataApi.extract_tables(file_info['content'])
+        tables = pydash.get(result, 'data.data')
+        meta = {
+            "source_url": file_info['source_url'],
+            "title": file_info['title']
+        }
+        table_meta = []
+        for table in tables:
+            table_list = table['table']
+            table_list = [{k.lower(): v for k, v in item.items()} for item in table_list]
+            logger.info(f"table_list: {table_list}")
+            table_result = await fastapi.create_dataframe(user_id=request.user_id, url=file_info['source_url'], table=table_list, entity_type=entity_type)
+            table_meta.append(table_result)
+        meta['table_meta'] = table_meta
+        file_meta.append(meta)
+    return {"file_meta": file_meta}
 
 @router.post("/strategy/create")
 async def save_strategy(request: SaveStrategyRequest):
