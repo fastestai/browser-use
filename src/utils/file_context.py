@@ -1,6 +1,7 @@
 from typing import List
 import logging
-from src.api.model import FileMeta
+from bs4 import BeautifulSoup
+# from src.api.model import FileMeta
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,10 @@ def convert_file_context(file_meta: List[dict], content: str, limit: int = 5000)
         
     for file in file_meta:
         file_context += f"url: {file['source_url']}\n"
-        file_context += f"content: {file['content'][:limit]}\n"
+        # Convert HTML to plain text before truncating
+        html_content = file['content']
+        soup = BeautifulSoup(html_content, 'html.parser')
+        plain_text = soup.get_text(separator=' ', strip=True)
+        file_context += f"content: {plain_text[:limit]}\n"
         
     return file_context 

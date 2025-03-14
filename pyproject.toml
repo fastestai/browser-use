@@ -23,11 +23,7 @@ dependencies = [
     "langchain-openai==0.3.1",
     "langchain-anthropic==0.3.3",
     "langchain-ollama==0.2.2",
-]
-urls = { "Repository" = "https://github.com/browser-use/browser-use" }
-
-[project.optional-dependencies]
-dev = [
+    "fastapi>=0.115.11",
     "tokencost>=0.1.16",
     "hatch>=1.13.0",
     "build>=1.2.2",
@@ -40,6 +36,16 @@ dev = [
     "langchain-aws>=0.2.11",
     "langchain-fireworks>=0.2.6",
     "langchain-google-genai==2.0.8",
+    "pydash>=8.0.5",
+    "pandas>=2.2.3",
+    "sse-starlette>=2.2.1",
+    "motor>=3.7.0",
+    "oss2>=2.19.1",
+]
+urls = { "Repository" = "https://github.com/browser-use/browser-use" }
+
+[project.optional-dependencies]
+dev = [
 ]
 
 [tool.ruff]
@@ -51,6 +57,12 @@ fix = true
 quote-style = "single"
 indent-style = "tab"
 docstring-code-format = true
+
+[tool.rye]
+dev-dependencies = [
+    "isort>=6.0.1",
+    "ruff>=0.9.10",
+]
 
 [build-system]
 requires = ["hatchling"]

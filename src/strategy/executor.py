@@ -26,8 +26,12 @@ class Executor:
         if not check_valid_json(response_content):
             return response_content, None
             
-        dataframe = json.loads(response_content)
-        dataframe_data = await self._query_tsdb_data(gpt_user_id, dataframe['dataframe_id'])
+        res = json.loads(response_content)
+        report = res.get('report')
+        if report:
+            return report, None
+        
+        dataframe_data = await self._query_tsdb_data(gpt_user_id, res['dataframe_id'])
         token = pydash.get(dataframe_data, '0.token')
         
         if not strategy_output.is_action:
@@ -41,7 +45,7 @@ class Executor:
         output: only json content, not need other content'''
         
         if request.file_meta:
-            file_context = convert_file_context(request.file_meta, request.content)
+            file_context = convert_file_context(request.file_meta, request.content, limit=50000)
             task = f'base on the context : {file_context}, {task}'
         return task
 
@@ -50,7 +54,7 @@ class Executor:
         """Get and process research response"""
         response = await self.ai_service.run_agent(agent_id=RESEARCH_AGENT_ID, task=task)
         response_content = pydash.get(response.data, 'result')
-        logger.debug(f"research result: {response_content}")
+        logger.info(f"research result: {response_content}")
         return response_content.replace("```json", "").replace("```", "")
 
     @log_time()
