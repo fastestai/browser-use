@@ -1,5 +1,6 @@
 GPT_ID = '67b036473feaa412f79ead94'
 RESEARCH_AGENT_ID = '67bd850ee0e09541da363980'
+# RESEARCH_AGENT_ID = '67d2cc31ad088d714547c7b4'
 RESEARCH_FORMAT_AGENT_ID = '67c553ac1c59b142105e7426'
 ANALYZE_AGENT_ID = '67b036633feaa412f79ead9a'
 EXECUTION_AGENT_ID = '67b04bee9b9a465aee960826'
@@ -19,6 +20,26 @@ STRATEGY_AGENT_CONFIG = {
 #             "model": "gpt-4o",
 #             "tools": [ "tsdb_query"]
 #         }
+
+RESEARCH_REPORT_AGENT_CONFIG =  {
+            "name": "crypto_research_report_agent",
+            "description": "Conduct research and analysis if necessary. Can be called multiple times.",
+            "system_message": """
+                # Role Description
+                You are a researcher tasked with generating a research report based on user instructions. Proceed only when delegated.
+                # Workflow
+                Understand the user instruction and construct the request based on the tool's request schema (if applicable).
+                Conduct research by listing the data you gather.
+                Generate the research report.
+                # Input
+                User instruction
+                # Output
+                Return the dataframe_id of the data list in a valid JSON format as follows: 
+                 {'report':'xxxxx'}
+            """,
+            "model": "gpt-4o",
+            "tools": [ "tsdb_query"]
+        }
 
 RESEARCH_FORMAT_AGENT_CONFIG =  {
             "name": "crypto_researcher_agent",

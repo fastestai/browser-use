@@ -2,6 +2,8 @@ import aiohttp
 import logging
 import asyncio
 import os
+import argparse
+import json
 
 from datetime import datetime
 from pydantic import BaseModel
@@ -164,13 +166,15 @@ class AIService:
         }
         return await self._request("POST",'/v1/agent/delete', data=data)
 
-    async def create_agent(self, agent_conf: dict, gpt_id: str):
+    async def create_agent(self,  gpt_id: str, agent_conf: Dict[str, Any]) -> Any:
         agent_conf.update({'gpt_id': gpt_id})
-        data ={
-            "agent_config": agent_conf
+        payload = {
+            "agent_id": agent_conf["agent_id"],
+            "agent_name": agent_conf["agent_name"],
+            "configuration": agent_conf["config"]
         }
         logger.info(agent_conf)
-        return await self._request("POST", '/v1/agent/create', data=data)
+        return await self._request("POST", '/v1/agent/create', data=payload)
 
     async def gpt_register_tool(self, gpt_id: str):
         data ={
@@ -232,12 +236,32 @@ class AIService:
         await self.close()
 
 async def main():
-    from src.const import GPT_ID, STRATEGY_AGENT_CONFIG, RESEARCH_FORMAT_AGENT_CONFIG
-    ai_service = AIService(base_url='https://api-dev.fastest.ai')
-    result = await ai_service.create_agent(gpt_id='679095f2053c84baac0faa99', agent_conf=RESEARCH_FORMAT_AGENT_CONFIG)
-    # result = await fastapi.delete_agent(GPT_ID, '67bd30729d7985a254ed05c2')
-    print(result)
+    from src.const import GPT_ID, RESEARCH_REPORT_AGENT_CONFIG
 
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='Create AI agent with configuration')
+    parser.add_argument('--config_file', type=str, required=True, help='Path to agent config JSON file')
+    
+    args = parser.parse_args()
+
+    # Read config from file
+    try:
+        with open(args.config_file, 'r') as f:
+            agent_config = json.load(f)
+    except Exception as e:
+        print(f"Error reading config file: {e}")
+        return
+
+    # Create agent configuration dictionary
+    agent_data = {
+        "agent_id": agent_config.get('agent_id'),
+        "agent_name": agent_config.get('agent_name'),
+        "config": agent_config.get('config')
+    }
+
+    ai_service = AIService(base_url='https://fin.fastest.ai')
+    result = await ai_service.create_agent(gpt_id=GPT_ID, agent_conf=agent_data)
+    print(result)
 
 if __name__ == "__main__":
     asyncio.run(main())
