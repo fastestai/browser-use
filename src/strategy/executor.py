@@ -40,7 +40,7 @@ class Executor:
 
     def _build_context(self, strategy_output, request):
         """Build the research task string"""
-        task = f'''{strategy_output.research_content}, 
+        task = f'''{request.content}, 
         response format: valid json and json is double quotes, not single quotes.
         output: only json content, not need other content'''
         
